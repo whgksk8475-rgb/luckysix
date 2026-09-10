@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>날아올라라 스카이클래스!</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tile { transition: all 0.2s; perspective: 1000px; }
+    .tile.picked { background-color: #f1f5f9; border-color: #cbd5e1; cursor: not-allowed; }
+    .tile:not(.picked):hover { transform: scale(1.05); }
+    .paper-tear { animation: tear 0.4s ease-out forwards; }
+    @keyframes tear {
+      0% { transform: scale(1) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 select-none">
+
+  <!-- 상단 대시보드: 남은 등수 및 실시간 확률 -->
+  <header class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+      <h1 class="text-2xl font-black tracking-wider">🚀 날아올라라 스카이클래스!</h1>
+      <div id="statsBar" class="flex gap-4 text-sm font-bold bg-indigo-700/60 px-4 py-2 rounded-xl">
+        <!-- 등수별 수량/확률 동적 렌더링 -->
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openStudentViewModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold">학생 개인조회</button>
+        <button onclick="openTeacherModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold">선생님 사용차감</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto p-4 flex gap-6">
+    <!-- 좌측/중앙: 200칸 뽑기판 영역 -->
+    <div class="flex-1 bg-white p-6 rounded-2xl shadow-md">
+      <!-- 진행자 바 (학생 선택 & 뽑기 개수 선택) -->
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <select id="currentStudent" class="border-2 border-indigo-400 rounded-xl px-3 py-2 text-lg font-bold">
+            <option value="">-- 학생 선택 --</option>
+          </select>
+          <select id="pickLimit" class="border-2 border-indigo-400 rounded-xl px-3 py-2 text-lg font-bold">
+            <option value="1">1개 뽑기</option>
+            <option value="2">2개 뽑기</option>
+            <option value="3">3개 뽑기</option>
+            <option value="5">5개 뽑기</option>
+            <option value="10">10개 뽑기</option>
+          </select>
+          <button id="startPickBtn" onclick="startPicking()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2 rounded-xl">뽑기 시작</button>
+        </div>
+        <div id="pickCounter" class="text-indigo-600 font-extrabold text-xl"></div>
+      </div>
+
+      <!-- 200개 격자 그리드 -->
+      <div id="gridBoard" class="grid grid-cols-10 sm:grid-cols-12 md:grid-cols-20 gap-2 overflow-y-auto max-h-[650px] p-2">
+        <!-- JS로 200개 타일 생성 -->
+      </div>
+    </div>
+
+    <!-- 우측: 이번 턴 뽑은 결과 & 학생 누적 확인 -->
+    <div class="w-80 flex flex-col gap-4">
+      <div class="bg-white p-5 rounded-2xl shadow-md">
+        <h3 class="font-black text-lg mb-3 text-slate-700 flex items-center justify-between">
+          <span>🎯 방금 뽑은 결과</span>
+          <span id="turnStudentName" class="text-sm font-normal text-indigo-600"></span>
+        </h3>
+        <div id="recentPicks" class="flex flex-col gap-2 min-h-[200px] border border-dashed border-slate-300 rounded-xl p-3 bg-slate-50">
+          <div class="text-sm text-slate-400 m-auto">학생 선택 후 뽑기를 진행하세요</div>
+        </div>
+      </div>
+
+      <!-- 합성(3:1) 변환 계산 안내 가이드 -->
+      <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl text-xs text-indigo-900 leading-relaxed">
+        <div class="font-bold mb-1">💡 3:1 교환 규칙</div>
+        5등 3개 → 4등 1개<br>
+        4등 3개 → 3등 1개<br>
+        3등 3개 → 2등 1개<br>
+        2등 3개 → 1등 1개
+      </div>
+    </div>
+  </div>
+
+<script>
+  const API_URL = "여기에_구글_웹앱_URL을_붙여넣으세요";
+  
+  let state = {
+    board: [],
+    remaining: {},
+    unpickedCount: 200,
+    students: [],
+    isPicking: false,
+    selectedStudent: "",
+    allowedCount: 0,
+    currentCount: 0,
+    turnResults: []
+  };
+
+  // 3:1 합성 가능 수량 계산 함수
+  function calculateMaxConversions(r5, r4, r3, r2) {
+    let conv4 = Math.floor(r5 / 3);
+    let total4 = r4 + conv4;
+    let conv3 = Math.floor(total4 / 3);
+    let total3 = r3 + conv3;
+    let conv2 = Math.floor(total3 / 3);
+    let total2 = r2 + conv2;
+    let conv1 = Math.floor(total2 / 3);
+    return { canMakeRank1: conv1, canMakeRank2: conv2, canMakeRank3: conv3, canMakeRank4: conv4 };
+  }
+
+  // 데이터 로드
+  async function fetchStatus() {
+    try {
+      const res = await fetch(`${API_URL}?action=getStatus`);
+      const data = await res.json();
+      state.board = data.board;
+      state.remaining = data.remaining;
+      state.unpickedCount = data.unpickedCount;
+      state.students = data.students;
+      renderStats();
+      renderBoard();
+      populateStudentDropdown();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderStats() {
+    const total = state.unpickedCount || 1;
+    const bar = document.getElementById("statsBar");
+    bar.innerHTML = [1,2,3,4,5].map(rank => {
+      const count = state.remaining[rank] || 0;
+      const pct = ((count / total) * 100).toFixed(1);
+      return `<div class="flex items-center gap-1">
+        <span class="bg-indigo-900/60 px-1.5 py-0.5 rounded">${rank}등</span>
+        <span>${count}개</span>
+        <span class="text-xs text-indigo-200">(${pct}%)</span>
+      </div>`;
+    }).join("");
+  }
+
+  function renderBoard() {
+    const grid = document.getElementById("gridBoard");
+    grid.innerHTML = "";
+    state.board.forEach((slot, idx) => {
+      const tile = document.createElement("div");
+      tile.className = `tile h-14 rounded-lg flex items-center justify-center font-black border-2 cursor-pointer ${
+        slot.picked ? "picked text-slate-400" : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+      }`;
+      tile.innerText = slot.picked ? (slot.prize ? `${slot.prize}등` : "빈칸") : (idx + 1);
+      if (!slot.picked) {
+        tile.onclick = () => handleSlotClick(idx + 1, tile);
+      }
+      grid.appendChild(tile);
+    });
+  }
+
+  function populateStudentDropdown() {
+    const select = document.getElementById("currentStudent");
+    const prev = select.value;
+    select.innerHTML = `<option value="">-- 학생 선택 --</option>` + 
+      state.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
+    select.value = prev;
+  }
+
+  function startPicking() {
+    const name = document.getElementById("currentStudent").value;
+    if (!name) return alert("학생을 먼저 선택해주세요!");
+    state.selectedStudent = name;
+    state.allowedCount = parseInt(document.getElementById("pickLimit").value, 10);
+    state.currentCount = 0;
+    state.turnResults = [];
+    state.isPicking = true;
+    
+    document.getElementById("turnStudentName").innerText = `${name} 학생 차례`;
+    document.getElementById("recentPicks").innerHTML = "";
+    updateCounter();
+  }
+
+  function updateCounter() {
+    document.getElementById("pickCounter").innerText = `남은 뽑기: ${state.allowedCount - state.currentCount}개`;
+  }
+
+  async function handleSlotClick(slotId, tileElement) {
+    if (!state.isPicking) return alert("상단의 '뽑기 시작' 버튼을 먼저 눌러주세요!");
+    if (state.currentCount >= state.allowedCount) return;
+
+    tileElement.classList.add("paper-tear");
+    state.currentCount++;
+    updateCounter();
+
+    // 서버로 뽑기 요청 전송
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "pick",
+        studentName: state.selectedStudent,
+        slotIds: [slotId]
+      })
+    });
+    const resData = await res.json();
+    if (resData.success) {
+      const result = resData.results[0];
+      tileElement.classList.add("picked");
+      tileElement.innerText = `${result.prize}등`;
+      
+      // 결과 우측에 추가
+      const p = document.createElement("div");
+      p.className = "p-2 bg-indigo-100 border border-indigo-300 rounded-lg font-bold flex justify-between";
+      p.innerHTML = `<span>#${slotId}번 칸</span> <span class="text-indigo-700">${result.prize}등 당첨! 🎉</span>`;
+      document.getElementById("recentPicks").prepend(p);
+
+      if (resData.autoReset) {
+        alert("축하합니다! 200칸이 모두 소진되어 새로운 판으로 자동 리셋됩니다!");
+        fetchStatus();
+      }
+
+      if (state.currentCount >= state.allowedCount) {
+        state.isPicking = false;
+        alert(`${state.selectedStudent} 학생 뽑기 완료! 다음 학생 차례입니다.`);
+        fetchStatus();
+      }
+    }
+  }
+
+  window.onload = fetchStatus;
+</script>
+</body>
+</html>
