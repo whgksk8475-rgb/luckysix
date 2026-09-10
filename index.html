@@ -84,7 +84,7 @@
             <i class="fa-solid fa-lock"></i>
           </div>
           <h3 class="font-jua text-2xl text-yellow-300 mb-1">뽑기판이 잠겨 있습니다</h3>
-          <p class="text-xs text-emerald-100 mb-4">선생님 암호(0306)를 입력하여 잠금을 해제해야 뽑기를 진행할 수 있습니다.</p>
+          <p class="text-xs text-emerald-100 mb-4">선생님 암호를 입력하여 잠금을 해제해야 뽑기를 진행할 수 있습니다.</p>
           
           <div class="flex items-center gap-2 max-w-xs w-full">
             <input type="password" id="boardUnlockInput" maxlength="6" placeholder="암호 입력" class="flex-1 bg-white/20 border-2 border-yellow-300/80 rounded-xl px-4 py-2 text-center font-bold tracking-widest text-lg text-white placeholder-emerald-200/60 outline-none focus:bg-white focus:text-slate-900 transition" onkeyup="if(event.key==='Enter') unlockBoard()" />
@@ -424,7 +424,7 @@
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // ✨ 배경음악 완전 삭제, 깔끔한 효과음만 제공
+    // 효과음 전용 신시사이저 (BGM 없음)
     const SoundFX = {
       ctx: null,
       
@@ -501,7 +501,6 @@
       }
     };
 
-    // CORS 차단 완전 회피형 전송 헬퍼 (새로운 웹앱 주소 적용)
     function forceSendToSheet(params) {
       const qs = new URLSearchParams(params).toString();
       const fullUrl = `${API_URL}?${qs}`;
@@ -766,6 +765,19 @@
       });
     }
 
+    // 선택 폼 초기화 (선택 실수 방지)
+    function resetSelectionForm() {
+      document.getElementById("studentSelect").value = "";
+      document.getElementById("pickCountSelect").value = "5";
+      document.getElementById("turnTargetName").innerText = "";
+      appState.currentStudent = "";
+      appState.allowedCount = 0;
+      appState.currentPickedCount = 0;
+      appState.isPicking = false;
+      syncPickButtons();
+      updateSessionCounter();
+    }
+
     function startPickingSession(isMultiMode = false) {
       if (appState.isProcessing) return;
 
@@ -854,16 +866,11 @@
       recalculateStats();
       saveCurrentState();
       renderStats();
-      syncPickButtons();
 
       const bestRank = Math.min(...results.map(r => r.prize));
       SoundFX.playWin(bestRank);
 
       showMultiRevealModal(results);
-
-      statusEl.className = "flex items-center gap-2 font-jua text-base py-1.5 px-4 rounded-xl bg-white/10 backdrop-blur border border-white/20 text-white shadow-sm";
-      statusEl.innerHTML = `<i class="fa-regular fa-circle-check text-emerald-300 text-lg"></i><span>✅ ${appState.currentStudent} 학생 연속 뽑기 완료!</span>`;
-
       appState.isProcessing = false;
     }
 
@@ -902,6 +909,7 @@
     function closeMultiRevealModal() {
       document.getElementById("multiRevealModal").classList.add("hidden");
       renderBoard();
+      resetSelectionForm(); // 완료 후 이름 및 개수 초기화
     }
 
     function updateSessionCounter() {
@@ -1008,6 +1016,7 @@
         appState.isPicking = false;
         updateSessionCounter();
         renderBoard();
+        resetSelectionForm(); // 완료 후 이름 및 개수 초기화
       } else {
         updateSessionCounter();
       }
