@@ -84,7 +84,7 @@
             <i class="fa-solid fa-lock"></i>
           </div>
           <h3 class="font-jua text-2xl text-yellow-300 mb-1">뽑기판이 잠겨 있습니다</h3>
-          <p class="text-xs text-emerald-100 mb-4">선생님 암호를 입력하여 잠금을 해제해야 뽑기를 진행할 수 있습니다.</p>
+          <p class="text-xs text-emerald-100 mb-4">선생님 암호(0306)를 입력하여 잠금을 해제해야 뽑기를 진행할 수 있습니다.</p>
           
           <div class="flex items-center gap-2 max-w-xs w-full">
             <input type="password" id="boardUnlockInput" maxlength="6" placeholder="암호 입력" class="flex-1 bg-white/20 border-2 border-yellow-300/80 rounded-xl px-4 py-2 text-center font-bold tracking-widest text-lg text-white placeholder-emerald-200/60 outline-none focus:bg-white focus:text-slate-900 transition" onkeyup="if(event.key==='Enter') unlockBoard()" />
@@ -417,64 +417,22 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxy1GF_hpjSD1V4ScETKWFwC88FZhDJ5V_BNr8G4CkRJB5yWpf6ZXQPczGFJKmMFmbt/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbyiCQJ-v54RZHFmxGtAc5fVTlNq_oxFyfk6irmPeWiPjdyY4cTiIY_DbYOzjRgyikuZvg/exec";
 
     const DEFAULT_CLASS_STUDENTS = [
       "고혜리", "김다인", "김채은", "김태유", "박민하", "박주아", "신아인", "옥윤서", "이여주", "최연지", "홍예서",
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // 효과음 볼륨 하향 조정 및 5트랙 BGM 플레이리스트
+    // ✨ 배경음악 완전 삭제, 깔끔한 효과음만 제공
     const SoundFX = {
       ctx: null,
-      bgmGain: null,
-      bgmTimer: null,
-      isBgmPlaying: false,
-      trackIndex: 0,
-      noteIndex: 0,
-
-      tracks: [
-        {
-          name: "테마 1: 활기찬 모험 (C 메이저)",
-          bpm: 180,
-          type: "triangle",
-          notes: [523.25, 659.25, 783.99, 1046.50, 783.99, 659.25, 523.25, 659.25, 587.33, 698.46, 880.00, 698.46, 523.25, 659.25, 783.99, 0]
-        },
-        {
-          name: "테마 2: 산뜻한 산책 (F 메이저)",
-          bpm: 200,
-          type: "sine",
-          notes: [349.23, 440.00, 523.25, 440.00, 392.00, 493.88, 587.33, 493.88, 440.00, 523.25, 659.25, 523.25, 349.23, 392.00, 440.00, 0]
-        },
-        {
-          name: "테마 3: 두근두근 아케이드 (A 마이너)",
-          bpm: 170,
-          type: "triangle",
-          notes: [440.00, 523.25, 659.25, 523.25, 440.00, 392.00, 329.63, 392.00, 440.00, 440.00, 523.25, 659.25, 783.99, 659.25, 523.25, 0]
-        },
-        {
-          name: "테마 4: 날아오르는 하늘 (G 메이저)",
-          bpm: 190,
-          type: "sine",
-          notes: [392.00, 493.88, 587.33, 783.99, 880.00, 783.99, 587.33, 493.88, 523.25, 659.25, 783.99, 1046.50, 880.00, 783.99, 587.33, 0]
-        },
-        {
-          name: "테마 5: 신나는 축제 (D 메이저)",
-          bpm: 175,
-          type: "triangle",
-          notes: [587.33, 739.99, 880.00, 1174.66, 880.00, 739.99, 587.33, 739.99, 659.25, 783.99, 987.77, 783.99, 587.33, 739.99, 880.00, 0]
-        }
-      ],
       
       init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           if (AudioContext) {
             this.ctx = new AudioContext();
-            this.bgmGain = this.ctx.createGain();
-            const sliderVal = document.getElementById("bgmVolumeSlider") ? document.getElementById("bgmVolumeSlider").value : 15;
-            this.bgmGain.gain.value = (sliderVal / 100) * 0.15;
-            this.bgmGain.connect(this.ctx.destination);
           }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
@@ -486,55 +444,6 @@
         this.init();
       },
 
-      setVolume(val) {
-        if (this.bgmGain && this.ctx) {
-          this.bgmGain.gain.setValueAtTime((val / 100) * 0.15, this.ctx.currentTime);
-        }
-      },
-
-      startBGM() {
-        this.init();
-        if (this.isBgmPlaying) return;
-        this.isBgmPlaying = true;
-        this.playNextLoop();
-      },
-
-      playNextLoop() {
-        if (!this.isBgmPlaying) return;
-        const curTrack = this.tracks[this.trackIndex];
-        const trackNameEl = document.getElementById("bgmTrackName");
-        if (trackNameEl) trackNameEl.innerText = curTrack.name;
-
-        const freq = curTrack.notes[this.noteIndex];
-        if (freq > 0 && this.ctx) {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = curTrack.type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          
-          gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
-          
-          osc.connect(gain);
-          if (this.bgmGain) osc.connect(this.bgmGain);
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.17);
-        }
-
-        this.noteIndex++;
-        if (this.noteIndex >= curTrack.notes.length) {
-          this.noteIndex = 0;
-          this.trackIndex = (this.trackIndex + 1) % this.tracks.length;
-        }
-
-        this.bgmTimer = setTimeout(() => this.playNextLoop(), curTrack.bpm);
-      },
-
-      stopBGM() {
-        this.isBgmPlaying = false;
-        if (this.bgmTimer) clearTimeout(this.bgmTimer);
-      },
-
       playTear() {
         this.init();
         if (!this.ctx) return;
@@ -544,7 +453,7 @@
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(280, now);
         osc.frequency.exponentialRampToValueAtTime(110, now + 0.11);
-        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.setValueAtTime(0.04, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
@@ -561,7 +470,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(550 + Math.random() * 250, now);
         osc.frequency.exponentialRampToValueAtTime(220, now + 0.06);
-        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.setValueAtTime(0.04, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
@@ -582,7 +491,7 @@
           osc.frequency.value = freq;
           const start = now + idx * 0.08;
           gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(0.07, start + 0.02);
+          gain.gain.linearRampToValueAtTime(0.06, start + 0.02);
           gain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
@@ -592,34 +501,7 @@
       }
     };
 
-    function toggleBGM(e) {
-      if (e) e.stopPropagation();
-      SoundFX.init();
-      const btn = document.getElementById("bgmToggleBtn");
-      const icon = document.getElementById("bgmIcon");
-      const text = document.getElementById("bgmText");
-
-      if (SoundFX.isBgmPlaying) {
-        SoundFX.stopBGM();
-        icon.className = "fa-solid fa-volume-xmark text-yellow-300";
-        text.innerText = "BGM 켜기";
-      } else {
-        SoundFX.startBGM();
-        icon.className = "fa-solid fa-volume-high text-yellow-300 animate-bounce";
-        text.innerText = "BGM 끄기";
-      }
-    }
-
-    function changeBgmVolume(val) {
-      SoundFX.setVolume(val);
-      if (!SoundFX.isBgmPlaying && val > 0) {
-        SoundFX.startBGM();
-        document.getElementById("bgmIcon").className = "fa-solid fa-volume-high text-yellow-300 animate-bounce";
-        document.getElementById("bgmText").innerText = "BGM 끄기";
-      }
-    }
-
-    // CORS 차단 완전 회피형 전송 헬퍼
+    // CORS 차단 완전 회피형 전송 헬퍼 (새로운 웹앱 주소 적용)
     function forceSendToSheet(params) {
       const qs = new URLSearchParams(params).toString();
       const fullUrl = `${API_URL}?${qs}`;
@@ -632,9 +514,9 @@
       img.src = fullUrl;
     }
 
-    const STORAGE_KEY_BOARD = "skyclass_board_v11";
-    const STORAGE_KEY_LOGS = "skyclass_logs_v11";
-    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v11";
+    const STORAGE_KEY_BOARD = "skyclass_board_v12";
+    const STORAGE_KEY_LOGS = "skyclass_logs_v12";
+    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v12";
 
     function generateStrictInitialBoard() {
       let pool = [];
@@ -886,9 +768,6 @@
 
     function startPickingSession(isMultiMode = false) {
       if (appState.isProcessing) return;
-
-      SoundFX.init();
-      if (!SoundFX.isBgmPlaying) SoundFX.startBGM();
 
       const name = document.getElementById("studentSelect").value;
       const count = parseInt(document.getElementById("pickCountSelect").value, 10);
