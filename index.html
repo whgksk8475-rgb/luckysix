@@ -13,9 +13,8 @@
       user-select: none;
       -webkit-user-select: none;
     }
-    .font-jua {
-      font-family: 'Jua', sans-serif;
-    }
+    .font-jua { font-family: 'Jua', sans-serif; }
+    
     .slot-card {
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
@@ -27,44 +26,31 @@
     .slot-card:active {
       transform: scale(0.94);
     }
-    /* 200칸 전자칠판 균일 20열 배치 */
     .grid-200 {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
       gap: 6px;
     }
     @media (min-width: 1024px) {
-      .grid-200 {
-        grid-template-columns: repeat(20, minmax(0, 1fr));
-      }
-    }
-    /* 확대 전시 팝업 애니메이션 */
-    @keyframes zoomBounce {
-      0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
-      60% { transform: scale(1.08) rotate(3deg); opacity: 1; }
-      80% { transform: scale(0.96) rotate(-1deg); }
-      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      .grid-200 { grid-template-columns: repeat(20, minmax(0, 1fr)); }
     }
     .modal-zoom {
-      animation: zoomBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      animation: zoomBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
-    /* 뜯어지는 이펙트 */
-    @keyframes tearAnim {
-      0% { transform: scale(1); filter: brightness(1); }
-      50% { transform: scale(1.2) rotate(6deg); filter: brightness(1.3); }
-      100% { transform: scale(0.85); opacity: 0; }
+    @keyframes zoomBounce {
+      0% { transform: scale(0.3); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
-    .tearing {
-      animation: tearAnim 0.35s ease-out forwards;
-    }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
-    ::-webkit-scrollbar-thumb { background: #a7f3d0; border-radius: 3px; }
+    
+    /* 교사용 표 가로/세로 크로스헤어 하이라이트 */
+    .cross-row { background-color: #ecfdf5 !important; }
+    .cross-col { background-color: #f0fdf4 !important; }
+    .cross-target { background-color: #bbf7d0 !important; font-weight: 800; }
   </style>
 </head>
 <body class="bg-emerald-50/50 min-h-screen text-slate-800 flex flex-col">
 
-  <!-- 상단 간결 헤더 -->
+  <!-- 상단 헤더 -->
   <header class="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white shadow-lg sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
       <div class="flex items-center gap-2.5">
@@ -75,7 +61,6 @@
         </div>
       </div>
 
-      <!-- 상단 차례 알림 상태 바 -->
       <div id="sessionStatus" class="flex items-center gap-2 font-jua text-base py-1.5 px-4 rounded-xl bg-white/10 backdrop-blur border border-white/20 text-white shadow-sm">
         <i class="fa-regular fa-hand-pointer text-yellow-300 text-lg"></i>
         <span>학생과 개수를 선택 후 [뽑기 시작!]을 눌러주세요</span>
@@ -86,39 +71,34 @@
   <!-- 메인 레이아웃 -->
   <main class="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col lg:flex-row gap-4">
     
-    <!-- 좌측 메인 영역: [확률/남은 수량 바] + [200개 격자] + [조작 바 & 학생 칩 목록] -->
+    <!-- 좌측 메인 영역 -->
     <section class="flex-1 flex flex-col gap-3">
       
-      <!-- 4. 뽑기판 바로 위 중앙으로 이동된 [남은 수량 & 실시간 확률 현황판] -->
-      <div id="statsBar" class="w-full flex flex-wrap items-center justify-between gap-1.5 bg-emerald-800/90 text-white p-2.5 rounded-2xl shadow-sm border border-emerald-600 text-xs font-semibold">
-        <!-- JS 실시간 렌더링 -->
-      </div>
+      <!-- 상단 정량 확률 현황판 -->
+      <div id="statsBar" class="w-full flex flex-wrap items-center justify-between gap-1.5 bg-emerald-800/95 text-white p-2.5 rounded-2xl shadow-sm border border-emerald-600 text-xs font-semibold"></div>
 
-      <!-- 200개 클로버 격자 뽑기판 카드 -->
+      <!-- 200개 클로버 격자 뽑기판 -->
       <div class="bg-white rounded-3xl p-4 shadow-sm border border-emerald-100 flex flex-col flex-1">
         <div class="flex-1 overflow-y-auto max-h-[580px] p-2 border border-emerald-50 rounded-2xl bg-emerald-50/20">
-          <div id="boardGrid" class="grid-200">
-            <!-- 1 ~ 200 클로버 생성 -->
-          </div>
+          <div id="boardGrid" class="grid-200"></div>
         </div>
       </div>
 
-      <!-- 하단 영역: [학생 조작 바] + [선생님 관리 & 원터치 학생 칩] -->
+      <!-- 하단 조작 영역 -->
       <div class="bg-white rounded-3xl p-4 shadow-sm border border-emerald-100 flex flex-col gap-3">
         
-        <!-- 1. 학생이름, 개수 선택, 뽑기 시작 버튼 (하단 상단 라인) -->
         <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-emerald-50/80 rounded-2xl border border-emerald-200">
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-1.5 text-sm font-extrabold text-emerald-950">
               <label>학생:</label>
-              <select id="studentSelect" class="bg-white text-slate-800 rounded-xl px-3 py-1.5 text-sm font-bold outline-none border-2 border-emerald-300 shadow-sm focus:border-emerald-500">
+              <select id="studentSelect" class="bg-white text-slate-800 rounded-xl px-3 py-1.5 text-sm font-bold outline-none border-2 border-emerald-300 shadow-sm">
                 <option value="">-- 학생 선택 --</option>
               </select>
             </div>
 
             <div class="flex items-center gap-1.5 text-sm font-extrabold text-emerald-950">
               <label>개수:</label>
-              <select id="pickCountSelect" class="bg-white text-slate-800 rounded-xl px-3 py-1.5 text-sm font-bold outline-none border-2 border-emerald-300 shadow-sm focus:border-emerald-500">
+              <select id="pickCountSelect" class="bg-white text-slate-800 rounded-xl px-3 py-1.5 text-sm font-bold outline-none border-2 border-emerald-300 shadow-sm">
                 <option value="1">1개 뽑기</option>
                 <option value="2">2개 뽑기</option>
                 <option value="3">3개 뽑기</option>
@@ -132,17 +112,17 @@
               </select>
             </div>
 
-            <button id="startPickBtn" onclick="startPickingSession()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 transition text-white px-6 py-2 rounded-xl font-black text-sm shadow-md flex items-center gap-2">
+            <button id="startPickBtn" onclick="startPickingSession()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 py-2 rounded-xl font-black text-sm shadow-md flex items-center gap-2">
               <i class="fa-solid fa-play text-xs"></i>
               <span>뽑기 시작!</span>
             </button>
           </div>
 
-          <!-- 선생님 관리 (2. 비밀번호 없이 바로 오픈) & 새로고침 -->
+          <!-- 선생님 관리 -->
           <div class="flex items-center gap-2">
-            <button onclick="openTeacherModal()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 transition text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 border border-amber-400">
+            <button onclick="promptTeacherAccess()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 border border-amber-400">
               <i class="fa-solid fa-chalkboard-user"></i>
-              <span>선생님 관리</span>
+              <span>선생님 관리 (0306)</span>
             </button>
             <button onclick="fetchStatus(true)" title="새로고침" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-xl text-xs shadow border border-slate-200">
               <i id="refreshIcon" class="fa-solid fa-rotate"></i>
@@ -150,28 +130,26 @@
           </div>
         </div>
 
-        <!-- 3. 내 이름 누르고 현황 보기 (학생 칩 원터치) -->
+        <!-- 학생 칩 목록 -->
         <div class="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
           <div class="flex items-center justify-between">
             <span class="text-xs font-extrabold text-slate-700 flex items-center gap-1">
               <i class="fa-solid fa-users text-emerald-600"></i>
-              <span>내 이름 누르고 현황 보기:</span>
+              <span>내 이름 누르고 보관함 보기:</span>
             </span>
-            <span class="text-[10px] text-slate-400">이름을 누르면 비밀번호 설정 및 보유량 조회가 진행됩니다.</span>
+            <span class="text-[10px] text-slate-400">이름을 누르면 비밀번호 설정 또는 입력 후 보유 현황이 열립니다.</span>
           </div>
-          <div id="quickStudentChips" class="flex flex-wrap gap-1.5 max-h-[90px] overflow-y-auto p-1">
-            <!-- 23명 학생 칩 동적 생성 -->
-          </div>
+          <div id="quickStudentChips" class="flex flex-wrap gap-1.5 max-h-[90px] overflow-y-auto p-1"></div>
         </div>
 
       </div>
 
     </section>
 
-    <!-- 6. 우측 사이드바: [방금 뽑은 결과(확장)] + [3:1 교환 규칙] -->
+    <!-- 우측 사이드바 -->
     <aside class="w-full lg:w-80 flex flex-col gap-3">
       
-      <!-- 5, 6. 방금 뽑은 결과창 (칸 대폭 확장 및 일시 기록 포함) -->
+      <!-- 방금 뽑은 결과창 (200개 누적) -->
       <div class="bg-white rounded-3xl p-4 shadow-sm border border-emerald-100 flex flex-col flex-1">
         <div class="flex items-center justify-between mb-2 pb-2 border-b border-emerald-50">
           <h3 class="font-jua text-base text-slate-800 flex items-center gap-1.5">
@@ -181,7 +159,6 @@
           <span id="turnTargetName" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md"></span>
         </div>
         
-        <!-- 200개 전체 누적 스크롤 영역 (최대 540px) -->
         <div id="recentResultList" class="flex flex-col gap-2 min-h-[380px] max-h-[540px] overflow-y-auto p-1 text-sm">
           <div class="text-slate-400 text-xs text-center my-auto">
             뽑기가 진행되면 학생 이름, 등수, 뽑은 시각이 실시간으로 누적 기록됩니다.
@@ -217,17 +194,12 @@
   <!-- [뽑기 결과 확대 전시 모달] -->
   <div id="revealModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
     <div id="revealCard" class="modal-zoom bg-white rounded-3xl max-w-sm w-full p-7 text-center shadow-2xl border-4 relative overflow-hidden">
-      <div id="revealBadgeBg" class="w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-3 shadow-inner text-4xl">
-        🍀
-      </div>
-      
+      <div id="revealBadgeBg" class="w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-3 shadow-inner text-4xl">🍀</div>
       <p id="revealSlotNum" class="text-sm font-bold text-slate-400 mb-1">#00번 칸을 뜯었습니다!</p>
       <h2 id="revealRankTitle" class="font-jua text-4xl mb-2">1등 당첨!</h2>
       <p id="revealStudentName" class="font-extrabold text-sm text-emerald-700 mb-6"></p>
-
-      <button id="revealNextBtn" onclick="onNextPickClicked()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-3.5 rounded-2xl text-lg shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
-        <span>다음 뽑기 진행 (1개 남음)</span>
-        <i class="fa-solid fa-arrow-right"></i>
+      <button id="revealNextBtn" onclick="onNextPickClicked()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black py-3.5 rounded-2xl text-lg shadow-lg">
+        <span>다음 뽑기 진행</span>
       </button>
     </div>
   </div>
@@ -245,19 +217,17 @@
 
       <div id="studentAuthBox" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">내 이름 선택</label>
-          <select id="modalStudentSelect" onchange="handleModalStudentChange()" class="w-full border-2 border-slate-300 rounded-xl p-2.5 font-bold outline-none focus:border-emerald-500">
-            <option value="">-- 내 이름을 선택하세요 --</option>
-          </select>
+          <label class="block text-xs font-bold text-slate-600 mb-1">내 이름</label>
+          <input type="text" id="modalStudentNameDisplay" readonly class="w-full bg-slate-100 border-2 border-slate-300 rounded-xl p-2.5 font-bold text-slate-700 outline-none" />
         </div>
 
-        <div id="pinInputArea" class="hidden">
+        <div>
           <label id="pinLabel" class="block text-xs font-bold text-slate-600 mb-1">개인 비밀번호 (PIN 4자리)</label>
           <input type="password" id="studentPinInput" maxlength="6" placeholder="비밀번호 입력" class="w-full border-2 border-slate-300 rounded-xl p-2.5 text-center font-bold tracking-widest text-lg outline-none focus:border-emerald-500" onkeyup="if(event.key==='Enter') verifyOrSetPin()" />
           <p id="pinHelpText" class="text-[11px] text-slate-500 mt-1"></p>
         </div>
 
-        <button id="authBtn" onclick="verifyOrSetPin()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition shadow hidden">
+        <button id="authBtn" onclick="verifyOrSetPin()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition shadow">
           확인
         </button>
       </div>
@@ -296,78 +266,90 @@
             <i class="fa-solid fa-calculator text-emerald-500"></i>
             <span>3:1 모아서 승급 시 교환 가능한 최고 등수:</span>
           </div>
-          <div id="detailConversionSummary" class="text-slate-600 leading-relaxed font-semibold">
-            계산 중...
-          </div>
+          <div id="detailConversionSummary" class="text-slate-600 leading-relaxed font-semibold">계산 중...</div>
         </div>
 
-        <button onclick="logoutStudentModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-sm transition">
+        <button onclick="closeStudentModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-sm transition">
           닫기
         </button>
       </div>
     </div>
   </div>
 
-  <!-- [선생님 전용 관리 모달 (비밀번호 없이 직통)] -->
-  <div id="teacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-emerald-100">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-jua text-xl text-amber-900 flex items-center gap-2">
-          <i class="fa-solid fa-chalkboard-user text-amber-500"></i>
-          <span>선생님 뽑기 티켓 관리</span>
-        </h3>
-        <button onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+  <!-- [교사 비밀번호 인증 모달] -->
+  <div id="teacherAuthModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl border-2 border-amber-400 text-center">
+      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
+        <i class="fa-solid fa-key"></i>
       </div>
-
-      <div class="flex gap-2 p-1 bg-slate-100 rounded-2xl mb-4 font-bold text-sm">
-        <button id="tabAdd" onclick="switchTeacherTab('add')" class="flex-1 py-2 rounded-xl bg-emerald-600 text-white shadow transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-plus-circle"></i>
-          <span>오프라인 티켓 추가</span>
-        </button>
-        <button id="tabDeduct" onclick="switchTeacherTab('deduct')" class="flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-minus-circle"></i>
-          <span>스마트 차감 (3:1 자동)</span>
-        </button>
+      <h3 class="font-jua text-xl text-slate-800 mb-1">교사 인증</h3>
+      <p class="text-xs text-slate-500 mb-4">선생님 전용 관리 비밀번호를 입력하세요.</p>
+      
+      <input type="password" id="teacherPassInput" maxlength="6" placeholder="0306" class="w-full border-2 border-amber-300 focus:border-amber-500 rounded-xl p-2.5 text-center font-bold tracking-widest text-xl mb-4 outline-none" onkeyup="if(event.key==='Enter') checkTeacherPassword()" />
+      
+      <div class="flex gap-2">
+        <button onclick="closeTeacherAuthModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm">취소</button>
+        <button onclick="checkTeacherPassword()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-sm shadow">입장</button>
       </div>
+    </div>
+  </div>
 
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">학생 선택</label>
-          <select id="teacherStudentSelect" onchange="renderTeacherStudentInfo()" class="w-full border-2 border-slate-300 rounded-xl p-2.5 font-bold outline-none focus:border-emerald-500">
-            <option value="">-- 학생을 선택하세요 --</option>
-          </select>
-        </div>
-
-        <div id="teacherStudentInventory" class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3 text-xs">
-          <div class="font-bold text-emerald-950 mb-1">현재 보유량:</div>
-          <div id="teacherStockText" class="text-slate-600">학생을 먼저 선택해 주세요.</div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
+  <!-- [대형 교사용 학생 전체 매트릭스 모달] -->
+  <div id="teacherMatrixModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-5xl w-full p-6 shadow-2xl border border-emerald-100 flex flex-col max-h-[90vh]">
+      
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">📊</span>
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">대상 등수</label>
-            <select id="manageRankSelect" class="w-full border-2 border-slate-300 rounded-xl p-2 font-bold outline-none">
-              <option value="1">1등</option>
-              <option value="2">2등</option>
-              <option value="3">3등</option>
-              <option value="4">4등</option>
-              <option value="5" selected>5등</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">수량 (개)</label>
-            <input type="number" id="manageCountInput" min="1" max="100" value="1" class="w-full border-2 border-slate-300 rounded-xl p-2 font-bold text-center outline-none" />
+            <h3 class="font-jua text-2xl text-slate-800">우리 반 학생 뽑기 보유 현황판</h3>
+            <p class="text-xs text-slate-500">마우스를 올리면 가로/세로가 하이라이트됩니다. 셀을 클릭하면 즉시 수량을 수정(차감/지급)할 수 있습니다.</p>
           </div>
         </div>
+        <button onclick="closeTeacherMatrixModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+      </div>
 
-        <p id="teacherModeDesc" class="text-[11px] text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 leading-tight">
-          💡 <b>스마트 차감 안내:</b> 상위 등수 티켓이 부족할 경우, 하위 등수에서 3:1 비율로 자동 변환되어 차감됩니다!
-        </p>
+      <div class="flex-1 overflow-auto my-4 border border-slate-200 rounded-2xl">
+        <table class="w-full text-center text-sm border-collapse" id="teacherTable">
+          <thead class="bg-slate-100 text-slate-700 font-extrabold sticky top-0 border-b border-slate-200 z-10">
+            <tr>
+              <th class="py-3 px-2 border-r border-slate-200 w-16">번호</th>
+              <th class="py-3 px-4 border-r border-slate-200 w-28">이름</th>
+              <th class="py-3 px-4 border-r border-slate-200 text-amber-600 col-1">1등 (👑)</th>
+              <th class="py-3 px-4 border-r border-slate-200 text-purple-600 col-2">2등 (🥈)</th>
+              <th class="py-3 px-4 border-r border-slate-200 text-blue-600 col-3">3등 (🥉)</th>
+              <th class="py-3 px-4 border-r border-slate-200 text-teal-600 col-4">4등 (🎁)</th>
+              <th class="py-3 px-4 border-r border-slate-200 text-emerald-600 col-5">5등 (🍬)</th>
+              <th class="py-3 px-4">3:1 승급 환산</th>
+            </tr>
+          </thead>
+          <tbody id="teacherTableBody" class="divide-y divide-slate-100 font-bold text-slate-800"></tbody>
+        </table>
+      </div>
 
-        <button id="teacherActionBtn" onclick="submitTeacherAction()" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow flex items-center justify-center gap-2">
-          <i class="fa-solid fa-plus-circle"></i>
-          <span>오프라인 보유 티켓 추가하기</span>
-        </button>
+      <div class="flex justify-between items-center pt-2 text-xs text-slate-500">
+        <span>💡 <b>Tip:</b> 특정 등수 칸을 누르면 수량 조절 팝업이 뜹니다.</span>
+        <button onclick="closeTeacherMatrixModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2 rounded-xl font-bold">닫기</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- [셀 클릭 시 수량 증감 미니 팝업] -->
+  <div id="cellEditModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl border-2 border-emerald-400 text-center">
+      <h4 id="cellEditTitle" class="font-jua text-lg text-slate-800 mb-1">수량 변경</h4>
+      <p id="cellEditDesc" class="text-xs text-slate-500 mb-4"></p>
+
+      <div class="flex items-center justify-center gap-3 mb-5">
+        <button onclick="adjustCellAmount(-1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xl font-bold text-slate-700">-</button>
+        <input type="number" id="cellEditAmount" min="0" max="999" class="w-20 text-center font-jua text-2xl border-2 border-emerald-300 rounded-xl py-1 outline-none" />
+        <button onclick="adjustCellAmount(1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xl font-bold text-slate-700">+</button>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="closeCellEditModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-xs">취소</button>
+        <button onclick="saveCellAmount()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow">저장 반영</button>
       </div>
     </div>
   </div>
@@ -380,7 +362,6 @@
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // 자체 사운드 신시사이저 (Web Audio API)
     const SoundFX = {
       ctx: null,
       init() {
@@ -388,9 +369,7 @@
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           if (AudioContext) this.ctx = new AudioContext();
         }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
       },
       playTear() {
         this.init();
@@ -399,53 +378,67 @@
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(320, now);
-        osc.frequency.exponentialRampToValueAtTime(140, now + 0.18);
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.16);
         gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(now);
-        osc.stop(now + 0.18);
+        osc.stop(now + 0.16);
       },
       playWin(rank) {
         this.init();
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
-        const notes = (rank === 1) ? [523.25, 659.25, 783.99, 1046.50] :
-                      (rank === 2) ? [440.00, 554.37, 659.25, 880.00] :
-                      (rank === 3) ? [392.00, 493.88, 587.33, 783.99] : [349.23, 440.00, 523.25];
+        const notes = (rank === 1) ? [523.25, 659.25, 783.99, 1046.50] : [392.00, 493.88, 587.33, 783.99];
         notes.forEach((freq, idx) => {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-          osc.type = (rank === 1 || rank === 2) ? 'triangle' : 'sine';
           osc.frequency.value = freq;
-          const start = now + idx * 0.09;
+          const start = now + idx * 0.08;
           gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(0.28, start + 0.03);
-          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.4);
+          gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start(start);
-          osc.stop(start + 0.42);
+          osc.stop(start + 0.36);
         });
       }
     };
 
-    function generateInitialBoard() {
-      let prizes = [];
-      for (let i = 0; i < 5; i++) prizes.push(1);
-      for (let i = 0; i < 15; i++) prizes.push(2);
-      for (let i = 0; i < 20; i++) prizes.push(3);
-      for (let i = 0; i < 50; i++) prizes.push(4);
-      for (let i = 0; i < 110; i++) prizes.push(5);
-      
-      for (let i = prizes.length - 1; i > 0; i--) {
+    async function sendApi(payload) {
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: { "Content-Type": "text/plain;charset=utf-8" }
+        });
+        return await res.json();
+      } catch (err) {
+        console.warn("POST 통신 재시도:", err);
+        const query = new URLSearchParams(payload).toString();
+        const res = await fetch(`${API_URL}?${query}`);
+        return await res.json();
+      }
+    }
+
+    // 200개 정량 비율 엄격 셔플 (1등: 5, 2등: 15, 3등: 20, 4등: 50, 5등: 110)
+    function generateStrictInitialBoard() {
+      let pool = [];
+      for (let i = 0; i < 5; i++) pool.push(1);
+      for (let i = 0; i < 15; i++) pool.push(2);
+      for (let i = 0; i < 20; i++) pool.push(3);
+      for (let i = 0; i < 50; i++) pool.push(4);
+      for (let i = 0; i < 110; i++) pool.push(5);
+
+      for (let i = pool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [prizes[i], prizes[j]] = [prizes[j], prizes[i]];
+        [pool[i], pool[j]] = [pool[j], pool[i]];
       }
 
-      return prizes.map((p, idx) => ({
+      return pool.map((p, idx) => ({
         id: idx + 1,
         prize: p,
         picked: false,
@@ -454,7 +447,7 @@
     }
 
     let appState = {
-      board: generateInitialBoard(),
+      board: generateStrictInitialBoard(),
       remaining: { 1: 5, 2: 15, 3: 20, 4: 50, 5: 110 },
       unpickedCount: 200,
       students: DEFAULT_CLASS_STUDENTS.map(name => ({
@@ -464,8 +457,7 @@
       currentStudent: "",
       allowedCount: 0,
       currentPickedCount: 0,
-      teacherMode: "add",
-      recentLogs: [] // 200개 누적 로그
+      editingCell: null
     };
 
     const RANK_THEMES = {
@@ -476,7 +468,6 @@
       5: { border: "border-emerald-400", title: "🍬 5등 당첨!", text: "text-emerald-700", bg: "bg-emerald-100", icon: "🍬" }
     };
 
-    // 1. 뽑기판 200개 렌더링
     function renderBoard() {
       const grid = document.getElementById("boardGrid");
       grid.innerHTML = "";
@@ -506,7 +497,6 @@
       });
     }
 
-    // 2. 4번 위치로 이동된 상단 통계바 렌더링
     function renderStats() {
       const total = appState.unpickedCount || 1;
       const bar = document.getElementById("statsBar");
@@ -534,36 +524,38 @@
       `;
     }
 
-    // 3. 서버 상태 로드
     async function fetchStatus(isManual = false) {
       const icon = document.getElementById("refreshIcon");
       if (icon) icon.classList.add("fa-spin");
 
       try {
-        const res = await fetch(`${API_URL}?action=getStatus&t=${Date.now()}`);
-        const data = await res.json();
+        const data = await sendApi({ action: "getStatus", t: Date.now() });
+        if (data && data.success) {
+          if (data.board && data.board.length === 200) {
+            appState.board = data.board;
+          }
+          if (data.remaining) {
+            appState.remaining = data.remaining;
+          }
+          if (data.unpickedCount !== undefined) {
+            appState.unpickedCount = data.unpickedCount;
+          }
 
-        if (data.board && data.board.length > 0) {
-          appState.board = data.board;
-          appState.remaining = data.remaining || appState.remaining;
-          appState.unpickedCount = data.unpickedCount ?? 200;
+          if (data.students && data.students.length > 0) {
+            const remoteMap = new Map(data.students.map(s => [s.name, s]));
+            appState.students = DEFAULT_CLASS_STUDENTS.map(name => {
+              if (remoteMap.has(name)) return remoteMap.get(name);
+              return { name, hasPin: false, rank1: 0, rank2: 0, rank3: 0, rank4: 0, rank5: 0 };
+            });
+          }
         }
-
-        if (data.students && data.students.length > 0) {
-          const remoteMap = new Map(data.students.map(s => [s.name, s]));
-          appState.students = DEFAULT_CLASS_STUDENTS.map(name => {
-            if (remoteMap.has(name)) return remoteMap.get(name);
-            return { name, hasPin: false, rank1: 0, rank2: 0, rank3: 0, rank4: 0, rank5: 0 };
-          });
-        }
-
         renderStats();
         renderBoard();
         renderStudentDropdowns();
         renderQuickChips();
 
       } catch (err) {
-        console.warn("오프라인 또는 로컬 모드로 작동 중:", err);
+        console.warn("로컬 상태로 구동 중:", err);
       } finally {
         if (icon) icon.classList.remove("fa-spin");
       }
@@ -571,28 +563,12 @@
 
     function renderStudentDropdowns() {
       const sel = document.getElementById("studentSelect");
-      const modalSel = document.getElementById("modalStudentSelect");
-      const teacherSel = document.getElementById("teacherStudentSelect");
-
       const currVal = sel.value;
-      const modalVal = modalSel.value;
-      const teacherVal = teacherSel.value;
-
-      const opts = `<option value="">-- 학생 선택 --</option>` +
+      sel.innerHTML = `<option value="">-- 학생 선택 --</option>` +
         appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-
-      sel.innerHTML = opts;
-      modalSel.innerHTML = `<option value="">-- 내 이름 선택 --</option>` +
-        appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-      teacherSel.innerHTML = `<option value="">-- 학생 선택 --</option>` +
-        appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-
       sel.value = currVal;
-      modalSel.value = modalVal;
-      teacherSel.value = teacherVal;
     }
 
-    // 3. 학생 칩 (이름 누르면 바로 보관함/PIN 설정 오픈)
     function renderQuickChips() {
       const container = document.getElementById("quickStudentChips");
       container.innerHTML = "";
@@ -606,7 +582,6 @@
       });
     }
 
-    // 4. 뽑기 세션 시작
     function startPickingSession() {
       SoundFX.init();
       const name = document.getElementById("studentSelect").value;
@@ -621,7 +596,6 @@
       appState.currentPickedCount = 0;
 
       document.getElementById("turnTargetName").innerText = `${name} 학생`;
-
       updateSessionCounter();
       renderBoard();
     }
@@ -639,7 +613,7 @@
       }
     }
 
-    // 5. 클로버 타일 터치 핸들러
+    // [확률 버그 차단] 클로버 타일 터치 핸들러
     async function onSlotClick(slotNum, cardElement) {
       if (!appState.isPicking) {
         alert("학생과 개수를 선택한 뒤 [뽑기 시작!] 버튼을 먼저 눌러주세요!");
@@ -653,30 +627,33 @@
       cardElement.classList.add("tearing");
 
       const slotIndex = slotNum - 1;
-      let prize = (appState.board[slotIndex] && appState.board[slotIndex].prize) ? appState.board[slotIndex].prize : (Math.floor(Math.random() * 5) + 1);
+      
+      // 임의 랜덤 생성(Math.random) 버그 원천 차단: 
+      // 미리 정의된 정량 200개 보드에서만 prize를 가져옵니다.
+      let prize = appState.board[slotIndex].prize;
+      if (!prize) {
+        // 만약 비어있는 비정상 슬롯이라면 남아있는 등수 중 비율 높은 순으로 안전 할당
+        prize = (appState.remaining[5] > 0) ? 5 : (appState.remaining[4] > 0 ? 4 : 3);
+      }
 
       appState.currentPickedCount++;
 
-      // 백엔드 비동기 통신
-      fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          action: "pick",
-          studentName: appState.currentStudent,
-          slotIds: [slotNum]
-        })
-      }).then(r => r.json()).then(data => {
-        if (data.success && data.results && data.results[0]) {
+      // 스프레드시트 서버로 전송
+      sendApi({
+        action: "pick",
+        studentName: appState.currentStudent,
+        slotIds: [slotNum]
+      }).then(data => {
+        if (data && data.success && data.results && data.results[0]) {
           prize = data.results[0].prize;
         }
-        if (data.autoReset) {
+        if (data && data.autoReset) {
           setTimeout(() => {
             alert("🎉 200개의 뽑기판이 모두 소진되어 새로운 판으로 자동 리셋되었습니다!");
             fetchStatus();
           }, 1200);
         }
-      }).catch(e => console.log("서버 통신 대기 중 로컬 처리:", e));
+      });
 
       // 학생 인벤토리 적립
       const targetStudent = appState.students.find(s => s.name === appState.currentStudent);
@@ -684,17 +661,15 @@
         targetStudent[`rank${prize}`] = (targetStudent[`rank${prize}`] || 0) + 1;
       }
 
-      // 상태 갱신
-      if (appState.board[slotIndex]) {
-        appState.board[slotIndex].picked = true;
-        appState.board[slotIndex].prize = prize;
-        appState.board[slotIndex].picked_by = appState.currentStudent;
-      }
+      // 판 상태 갱신 (정확한 차감)
+      appState.board[slotIndex].picked = true;
+      appState.board[slotIndex].prize = prize;
+      appState.board[slotIndex].picked_by = appState.currentStudent;
+
       if (appState.remaining[prize] > 0) appState.remaining[prize]--;
       if (appState.unpickedCount > 0) appState.unpickedCount--;
       renderStats();
 
-      // 사라진 자리에 회색 음영 등수 전시
       setTimeout(() => {
         cardElement.classList.remove("tearing");
         cardElement.className = "slot-card picked h-12 rounded-xl bg-slate-200/80 border border-slate-300 text-slate-500 flex flex-col items-center justify-center text-xs font-bold cursor-not-allowed select-none";
@@ -704,16 +679,13 @@
         `;
       }, 350);
 
-      // 5. 방금 뽑은 결과창에 누적 (일시 기록 포함)
       appendRecentResult(slotNum, prize, appState.currentStudent);
 
-      // 확대 모달 전시
       setTimeout(() => {
         showRevealModal(slotNum, prize);
       }, 250);
     }
 
-    // 6. 결과 확대 전시 모달
     function showRevealModal(slotNum, prize) {
       const modal = document.getElementById("revealModal");
       const card = document.getElementById("revealCard");
@@ -724,7 +696,6 @@
       const nextBtn = document.getElementById("revealNextBtn");
 
       const theme = RANK_THEMES[prize] || RANK_THEMES[5];
-
       SoundFX.playWin(prize);
 
       card.className = `modal-zoom bg-white rounded-3xl max-w-sm w-full p-7 text-center shadow-2xl border-4 relative overflow-hidden ${theme.border}`;
@@ -739,10 +710,8 @@
       const left = appState.allowedCount - appState.currentPickedCount;
       if (left > 0) {
         nextBtn.innerHTML = `<span>다음 뽑기 진행 (남은 뽑기: ${left}개)</span> <i class="fa-solid fa-arrow-right"></i>`;
-        nextBtn.className = "w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-3.5 rounded-2xl text-lg shadow-lg active:scale-95 transition flex items-center justify-center gap-2";
       } else {
         nextBtn.innerHTML = `<span>뽑기 완료! (확인)</span> <i class="fa-solid fa-check"></i>`;
-        nextBtn.className = "w-full bg-gradient-to-r from-indigo-500 to-emerald-600 hover:from-indigo-600 hover:to-emerald-700 text-white font-black py-3.5 rounded-2xl text-lg shadow-lg active:scale-95 transition flex items-center justify-center gap-2";
       }
 
       modal.classList.remove("hidden");
@@ -751,7 +720,6 @@
     function onNextPickClicked() {
       document.getElementById("revealModal").classList.add("hidden");
       const left = appState.allowedCount - appState.currentPickedCount;
-
       if (left <= 0) {
         appState.isPicking = false;
         updateSessionCounter();
@@ -761,23 +729,17 @@
       }
     }
 
-    // 5. OOO학생 N등 당첨! (밑에 일시 기록) - 200개 모두 누적
     function appendRecentResult(slotNum, prize, studentName) {
       const list = document.getElementById("recentResultList");
-      
-      // 안내 문구 삭제
-      if (list.querySelector(".text-slate-400")) {
-        list.innerHTML = "";
-      }
+      if (list.querySelector(".text-slate-400")) list.innerHTML = "";
 
       const item = document.createElement("div");
       const theme = RANK_THEMES[prize] || RANK_THEMES[5];
 
-      // 일시 포맷 (예: 2026. 4. 20. 14:32:05)
       const now = new Date();
-      const timeStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
-      item.className = `p-2.5 rounded-2xl border flex items-center justify-between shadow-sm ${theme.bg} ${theme.border} animate-fadeIn`;
+      item.className = `p-2.5 rounded-2xl border flex items-center justify-between shadow-sm ${theme.bg} ${theme.border}`;
       item.innerHTML = `
         <div class="flex flex-col">
           <div class="flex items-center gap-1.5">
@@ -788,7 +750,7 @@
         </div>
         <span class="text-[11px] font-bold text-slate-500 bg-white/80 px-2 py-1 rounded-lg">#${slotNum}번</span>
       `;
-      list.prepend(item); // 최신순 누적
+      list.prepend(item);
     }
 
     function calculateMaxUpgrades(r5, r4, r3, r2) {
@@ -802,18 +764,29 @@
       return { canMake1, canMake2, canMake3, canMake4 };
     }
 
-    // 8. 학생 개인 보관함 모달 (3. 원터치 접속 대응)
+    // 학생 보관함 모달 & 비밀번호 등록/확인
     function openStudentModalWithName(name) {
+      const student = appState.students.find(s => s.name === name);
       document.getElementById("studentModal").classList.remove("hidden");
       document.getElementById("studentAuthBox").classList.remove("hidden");
       document.getElementById("studentDetailBox").classList.add("hidden");
-      document.getElementById("pinInputArea").classList.remove("hidden");
-      document.getElementById("authBtn").classList.remove("hidden");
+      document.getElementById("modalStudentNameDisplay").value = name;
       document.getElementById("studentPinInput").value = "";
 
-      const sel = document.getElementById("modalStudentSelect");
-      sel.value = name;
-      handleModalStudentChange();
+      const pinLabel = document.getElementById("pinLabel");
+      const help = document.getElementById("pinHelpText");
+      const authBtn = document.getElementById("authBtn");
+
+      if (student && student.hasPin) {
+        pinLabel.innerText = "개인 비밀번호 입력";
+        help.innerText = "설정하신 비밀번호 4자리를 입력하세요.";
+        authBtn.innerText = "보관함 열기";
+      } else {
+        pinLabel.innerText = "초기 비밀번호 등록 (PIN 4자리)";
+        help.innerText = "처음 접속하셨습니다! 앞으로 사용할 비밀번호를 등록하세요.";
+        authBtn.innerText = "비밀번호 설정 및 확인";
+      }
+
       setTimeout(() => document.getElementById("studentPinInput").focus(), 150);
     }
 
@@ -821,63 +794,25 @@
       document.getElementById("studentModal").classList.add("hidden");
     }
 
-    function handleModalStudentChange() {
-      const name = document.getElementById("modalStudentSelect").value;
-      if (!name) {
-        document.getElementById("pinInputArea").classList.add("hidden");
-        document.getElementById("authBtn").classList.add("hidden");
-        return;
-      }
-
-      const student = appState.students.find(s => s.name === name);
-      const pinArea = document.getElementById("pinInputArea");
-      const authBtn = document.getElementById("authBtn");
-      const pinLabel = document.getElementById("pinLabel");
-      const help = document.getElementById("pinHelpText");
-
-      pinArea.classList.remove("hidden");
-      authBtn.classList.remove("hidden");
-      document.getElementById("studentPinInput").value = "";
-
-      if (student && student.hasPin) {
-        pinLabel.innerText = "개인 비밀번호 입력";
-        help.innerText = "설정한 개인 암호를 입력하세요.";
-        authBtn.innerText = "보관함 열기";
-      } else {
-        pinLabel.innerText = "개인 비밀번호 최초 설정 (4자리 권장)";
-        help.innerText = "처음 확인하는 학생입니다! 앞으로 사용할 암호를 설정하세요.";
-        authBtn.innerText = "비밀번호 설정 및 조회";
-      }
-    }
-
     async function verifyOrSetPin() {
-      const name = document.getElementById("modalStudentSelect").value;
+      const name = document.getElementById("modalStudentNameDisplay").value;
       const pin = document.getElementById("studentPinInput").value.trim();
       const student = appState.students.find(s => s.name === name);
 
-      if (!name || !pin) return alert("이름과 비밀번호를 모두 입력해주세요!");
+      if (!pin) return alert("비밀번호를 입력해주세요!");
 
-      const action = (student && student.hasPin) ? "verifyPin" : "setPin";
+      const isFirst = !(student && student.hasPin);
+      const action = isFirst ? "setPin" : "verifyPin";
 
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ action, studentName: name, pin })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          showStudentDetails(student);
-          if (action === "setPin") {
-            student.hasPin = true;
-            alert("비밀번호가 성공적으로 설정되었습니다!");
-          }
-        } else {
-          alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요.");
+      const res = await sendApi({ action, studentName: name, pin });
+      if (res && res.success) {
+        if (isFirst) {
+          student.hasPin = true;
+          alert("비밀번호가 성공적으로 등록되었습니다!");
         }
-      } catch (err) {
         showStudentDetails(student);
+      } else {
+        alert("비밀번호가 일치하지 않습니다!");
       }
     }
 
@@ -893,9 +828,7 @@
       document.getElementById("detailR5").innerText = student.rank5 || 0;
 
       const upgrades = calculateMaxUpgrades(student.rank5 || 0, student.rank4 || 0, student.rank3 || 0, student.rank2 || 0);
-      const summEl = document.getElementById("detailConversionSummary");
-
-      summEl.innerHTML = `
+      document.getElementById("detailConversionSummary").innerHTML = `
         <ul class="list-disc pl-4 space-y-1">
           <li>모든 티켓을 승급 시 <strong class="text-amber-600">1등 최대 ${upgrades.canMake1}개</strong>까지 교환 가능!</li>
           <li>2등으로만 모을 경우: 최대 <strong class="text-purple-600">${upgrades.canMake2}개</strong></li>
@@ -905,112 +838,132 @@
       `;
     }
 
-    function logoutStudentModal() {
-      const name = document.getElementById("modalStudentSelect").value;
-      if (name) openStudentModalWithName(name);
-      else closeStudentModal();
+    // 교사 인증 모달 (0306)
+    function promptTeacherAccess() {
+      document.getElementById("teacherAuthModal").classList.remove("hidden");
+      document.getElementById("teacherPassInput").value = "";
+      setTimeout(() => document.getElementById("teacherPassInput").focus(), 100);
     }
 
-    // 2. 선생님 전용 관리 모달 (비밀번호 없이 직통)
-    function openTeacherModal() {
-      document.getElementById("teacherModal").classList.remove("hidden");
-      renderTeacherStudentInfo();
+    function closeTeacherAuthModal() {
+      document.getElementById("teacherAuthModal").classList.add("hidden");
     }
 
-    function closeTeacherModal() {
-      document.getElementById("teacherModal").classList.add("hidden");
-    }
-
-    function switchTeacherTab(mode) {
-      appState.teacherMode = mode;
-      const tabAdd = document.getElementById("tabAdd");
-      const tabDeduct = document.getElementById("tabDeduct");
-      const actionBtn = document.getElementById("teacherActionBtn");
-      const modeDesc = document.getElementById("teacherModeDesc");
-
-      if (mode === "add") {
-        tabAdd.className = "flex-1 py-2 rounded-xl bg-emerald-600 text-white shadow transition flex items-center justify-center gap-1.5";
-        tabDeduct.className = "flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5";
-        modeDesc.innerHTML = `💡 <b>오프라인 추가 안내:</b> 기존 오프라인 종이 뽑기로 획득한 티켓을 학생 계정에 바로 적립합니다.`;
-        actionBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow flex items-center justify-center gap-2";
-        actionBtn.innerHTML = `<i class="fa-solid fa-plus-circle"></i><span>오프라인 보유 티켓 추가하기</span>`;
+    function checkTeacherPassword() {
+      const pass = document.getElementById("teacherPassInput").value.trim();
+      if (pass === "0306") {
+        closeTeacherAuthModal();
+        openTeacherMatrixModal();
       } else {
-        tabDeduct.className = "flex-1 py-2 rounded-xl bg-rose-600 text-white shadow transition flex items-center justify-center gap-1.5";
-        tabAdd.className = "flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5";
-        modeDesc.innerHTML = `💡 <b>스마트 차감 안내:</b> 상위 등수 티켓이 부족할 경우, 하위 등수에서 3:1 비율로 자동 변환되어 차감됩니다!`;
-        actionBtn.className = "w-full bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow flex items-center justify-center gap-2";
-        actionBtn.innerHTML = `<i class="fa-solid fa-minus-circle"></i><span>스마트 자동 차감 처리하기</span>`;
+        alert("교사 비밀번호가 일치하지 않습니다!");
+        document.getElementById("teacherPassInput").value = "";
       }
     }
 
-    function renderTeacherStudentInfo() {
-      const name = document.getElementById("teacherStudentSelect").value;
-      const textEl = document.getElementById("teacherStockText");
-      if (!name) {
-        textEl.innerText = "학생을 먼저 선택해 주세요.";
-        return;
-      }
-      const student = appState.students.find(s => s.name === name);
-      if (!student) return;
-
-      textEl.innerHTML = `
-        <span class="font-bold text-slate-800">${name} 학생:</span>
-        1등: <b>${student.rank1 || 0}개</b> |
-        2등: <b>${student.rank2 || 0}개</b> |
-        3등: <b>${student.rank3 || 0}개</b> |
-        4등: <b>${student.rank4 || 0}개</b> |
-        5등: <b>${student.rank5 || 0}개</b>
-      `;
+    // 대형 교사용 학생 전체 매트릭스 뷰
+    function openTeacherMatrixModal() {
+      document.getElementById("teacherMatrixModal").classList.remove("hidden");
+      renderTeacherTable();
     }
 
-    async function submitTeacherAction() {
-      const name = document.getElementById("teacherStudentSelect").value;
-      const rank = parseInt(document.getElementById("manageRankSelect").value, 10);
-      const count = parseInt(document.getElementById("manageCountInput").value, 10);
-      const isAdd = appState.teacherMode === "add";
+    function closeTeacherMatrixModal() {
+      document.getElementById("teacherMatrixModal").classList.add("hidden");
+    }
 
-      if (!name) return alert("학생을 선택하세요!");
-      if (isNaN(count) || count <= 0) return alert("올바른 수량을 입력하세요!");
+    function renderTeacherTable() {
+      const tbody = document.getElementById("teacherTableBody");
+      tbody.innerHTML = "";
 
-      try {
-        const actionType = isAdd ? "addTicket" : "deduct";
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            action: actionType,
-            studentName: name,
-            rank: rank,
-            count: count
-          })
+      appState.students.forEach((s, idx) => {
+        const upgrades = calculateMaxUpgrades(s.rank5, s.rank4, s.rank3, s.rank2);
+        const tr = document.createElement("tr");
+        tr.className = "student-row hover:bg-emerald-50 transition cursor-pointer";
+        tr.dataset.rowIndex = idx;
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-2 border-r border-slate-200 text-slate-400 text-xs">${idx + 1}</td>
+          <td class="py-2.5 px-4 border-r border-slate-200 font-extrabold text-slate-700">${s.name}</td>
+          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-1 text-amber-700" data-col="1" onclick="openCellEdit('${s.name}', 1, ${s.rank1})">${s.rank1}개</td>
+          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-2 text-purple-700" data-col="2" onclick="openCellEdit('${s.name}', 2, ${s.rank2})">${s.rank2}개</td>
+          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-3 text-blue-700" data-col="3" onclick="openCellEdit('${s.name}', 3, ${s.rank3})">${s.rank3}개</td>
+          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-4 text-teal-700" data-col="4" onclick="openCellEdit('${s.name}', 4, ${s.rank4})">${s.rank4}개</td>
+          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-5 text-emerald-700" data-col="5" onclick="openCellEdit('${s.name}', 5, ${s.rank5})">${s.rank5}개</td>
+          <td class="py-2.5 px-4 text-xs font-semibold text-slate-500">
+            ${upgrades.canMake1 > 0 ? `<span class="text-amber-600 font-bold">1등 ${upgrades.canMake1}개 가능</span>` : `2등 ${upgrades.canMake2}개 가능`}
+          </td>
+        `;
+
+        const cells = tr.querySelectorAll(".cell-rank");
+        cells.forEach(cell => {
+          cell.addEventListener("mouseenter", () => {
+            const col = cell.dataset.col;
+            tr.classList.add("cross-row");
+            document.querySelectorAll(`.col-${col}`).forEach(el => el.classList.add("cross-col"));
+            cell.classList.add("cross-target");
+          });
+          cell.addEventListener("mouseleave", () => {
+            const col = cell.dataset.col;
+            tr.classList.remove("cross-row");
+            document.querySelectorAll(`.col-${col}`).forEach(el => el.classList.remove("cross-col"));
+            cell.classList.remove("cross-target");
+          });
         });
-        const data = await res.json();
-        if (data.success) {
-          const actionWord = isAdd ? "추가" : "스마트 차감";
-          alert(`${name} 학생에게 ${rank}등 티켓 ${count}개가 성공적으로 ${actionWord}되었습니다.`);
-          renderTeacherStudentInfo();
-          fetchStatus();
-        } else {
-          alert("처리 실패: " + (data.message || "보유 티켓 총량이 부족합니다."));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("처리 중 오류가 발생했습니다.");
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openCellEdit(studentName, rank, currentCount) {
+      appState.editingCell = { studentName, rank, amount: currentCount };
+      document.getElementById("cellEditModal").classList.remove("hidden");
+      document.getElementById("cellEditTitle").innerText = `${studentName} 학생 ${rank}등 티켓`;
+      document.getElementById("cellEditDesc").innerText = `현재 보유량: ${currentCount}개 (원하는 수량으로 조절하세요)`;
+      document.getElementById("cellEditAmount").value = currentCount;
+    }
+
+    function closeCellEditModal() {
+      document.getElementById("cellEditModal").classList.add("hidden");
+    }
+
+    function adjustCellAmount(diff) {
+      const input = document.getElementById("cellEditAmount");
+      let val = Math.max(0, parseInt(input.value || 0, 10) + diff);
+      input.value = val;
+    }
+
+    async function saveCellAmount() {
+      const input = document.getElementById("cellEditAmount");
+      const val = Math.max(0, parseInt(input.value || 0, 10));
+      const { studentName, rank } = appState.editingCell;
+
+      const student = appState.students.find(s => s.name === studentName);
+      if (student) {
+        student[`rank${rank}`] = val;
+      }
+
+      closeCellEditModal();
+      renderTeacherTable();
+
+      const res = await sendApi({
+        action: "updateTicket",
+        studentName,
+        rank,
+        newAmount: val
+      });
+
+      if (res && res.success) {
+        fetchStatus();
+      } else {
+        alert("서버 저장 실패: " + (res ? res.message : "통신 오류"));
       }
     }
 
-    // 10. 초기 구동
     window.addEventListener("DOMContentLoaded", () => {
       renderStats();
       renderBoard();
       renderStudentDropdowns();
       renderQuickChips();
-
       fetchStatus();
-
-      setInterval(() => {
-        if (!appState.isPicking) fetchStatus();
-      }, 30000);
     });
   </script>
 </body>
