@@ -1,905 +1,190 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🚀 날아올라라 스카이클래스!</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;600;800&display=swap');
-    body {
-      font-family: 'Noto Sans KR', sans-serif;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .font-jua {
-      font-family: 'Jua', sans-serif;
-    }
-    .slot-card {
-      perspective: 1000px;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .slot-card:hover:not(.picked):not(.disabled) {
-      transform: translateY(-2px) scale(1.03);
-      box-shadow: 0 6px 14px -2px rgba(99, 102, 241, 0.35);
-    }
-    .slot-card:active:not(.picked):not(.disabled) {
-      transform: scale(0.96);
-    }
-    .tear-effect {
-      animation: paperTear 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    }
-    @keyframes paperTear {
-      0% { transform: scale(1) rotate(0deg); opacity: 1; }
-      40% { transform: scale(1.18) rotate(-4deg); opacity: 0.9; }
-      70% { transform: scale(0.95) rotate(3deg); }
-      100% { transform: scale(1) rotate(0deg); opacity: 1; }
-    }
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-  </style>
-</head>
-<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col">
+const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
+const BOARD_SHEET = SPREADSHEET.getSheetByName("board");
+const STUDENTS_SHEET = SPREADSHEET.getSheetByName("students");
 
-  <!-- 상단 헤더 & 대시보드 -->
-  <header class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-700 text-white shadow-lg sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-      <div class="flex items-center gap-3">
-        <span class="text-3xl">🚀</span>
-        <div>
-          <h1 class="font-jua text-2xl md:text-3xl tracking-wide text-yellow-300 drop-shadow">날아올라라 스카이클래스!</h1>
-          <p class="text-xs text-indigo-200">6학년 3반 200칸 전자칠판 뽑기판 (200개 소진 시 자동 리셋)</p>
-        </div>
-      </div>
+function initBoard() {
+  BOARD_SHEET.clearContents();
+  BOARD_SHEET.appendRow(["id", "prize", "picked", "picked_by"]);
+  
+  let prizes = [];
+  for (let i = 0; i < 5; i++) prizes.push(1);
+  for (let i = 0; i < 15; i++) prizes.push(2);
+  for (let i = 0; i < 20; i++) prizes.push(3);
+  for (let i = 0; i < 50; i++) prizes.push(4);
+  for (let i = 0; i < 110; i++) prizes.push(5);
+  
+  for (let i = prizes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [prizes[i], prizes[j]] = [prizes[j], prizes[i]];
+  }
+  
+  const rows = prizes.map((p, idx) => [idx + 1, p, false, ""]);
+  BOARD_SHEET.getRange(2, 1, rows.length, 4).setValues(rows);
+}
 
-      <!-- 남은 수량 및 실시간 확률 현황판 -->
-      <div id="statsBar" class="flex flex-wrap items-center gap-2 bg-indigo-900/60 backdrop-blur px-4 py-2 rounded-2xl border border-indigo-400/30 text-xs md:text-sm font-semibold">
-        <span class="text-slate-300">현황 불러오는 중...</span>
-      </div>
-
-      <!-- 상단 액션 버튼 -->
-      <div class="flex items-center gap-2">
-        <button onclick="openStudentModal()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 transition text-white px-3.5 py-2 rounded-xl text-sm font-bold shadow flex items-center gap-1.5 border border-emerald-400">
-          <i class="fa-solid fa-mobile-screen-button"></i>
-          <span>내 뽑기 보관함 (학생용)</span>
-        </button>
-        <button onclick="promptTeacherAccess()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 transition text-white px-3.5 py-2 rounded-xl text-sm font-bold shadow flex items-center gap-1.5 border border-amber-400">
-          <i class="fa-solid fa-lock"></i>
-          <span>선생님 관리 (0306)</span>
-        </button>
-        <button onclick="fetchStatus(true)" title="새로고침" class="bg-indigo-800 hover:bg-indigo-900 text-white p-2 rounded-xl text-sm shadow">
-          <i id="refreshIcon" class="fa-solid fa-rotate"></i>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- 메인 레이아웃 -->
-  <main class="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col lg:flex-row gap-5">
+function doGet(e) {
+  const action = e.parameter.action;
+  if (action === "getStatus") {
+    const boardData = BOARD_SHEET.getDataRange().getValues().slice(1);
+    const studentsData = STUDENTS_SHEET.getDataRange().getValues().slice(1);
     
-    <!-- 좌측: 뽑기판 및 컨트롤 바 -->
-    <section class="flex-1 bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col">
-      <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-indigo-50/70 rounded-2xl border border-indigo-100 mb-4">
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2">
-            <label class="text-xs font-extrabold text-indigo-950">학생 선택:</label>
-            <select id="studentSelect" class="bg-white border-2 border-indigo-300 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-base font-bold text-slate-800 shadow-sm outline-none">
-              <option value="">-- 학생을 선택하세요 --</option>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <label class="text-xs font-extrabold text-indigo-950">뽑기 개수:</label>
-            <select id="pickCountSelect" class="bg-white border-2 border-indigo-300 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-base font-bold text-slate-800 shadow-sm outline-none">
-              <option value="1">1개 뽑기</option>
-              <option value="2">2개 뽑기</option>
-              <option value="3">3개 뽑기</option>
-              <option value="4">4개 뽑기</option>
-              <option value="5">5개 뽑기</option>
-              <option value="6">6개 뽑기</option>
-              <option value="7">7개 뽑기</option>
-              <option value="8">8개 뽑기</option>
-              <option value="9">9개 뽑기</option>
-              <option value="10">10개 뽑기</option>
-            </select>
-          </div>
-
-          <button id="startPickBtn" onclick="startPickingSession()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition text-white px-5 py-2 rounded-xl font-extrabold text-sm shadow-md flex items-center gap-2">
-            <i class="fa-solid fa-play"></i>
-            <span>뽑기 시작</span>
-          </button>
-        </div>
-
-        <div id="sessionStatus" class="flex items-center gap-2 font-jua text-lg px-4 py-1 rounded-xl bg-white border border-indigo-200 text-indigo-700">
-          <i class="fa-regular fa-hand-pointer text-indigo-500"></i>
-          <span>학생과 개수를 선택해주세요</span>
-        </div>
-      </div>
-
-      <!-- 200개 그리드 -->
-      <div class="flex-1 overflow-y-auto max-h-[620px] p-2 border border-slate-100 rounded-2xl bg-slate-50/50">
-        <div id="boardGrid" class="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-16 lg:grid-cols-20 gap-1.5"></div>
-      </div>
-    </section>
-
-    <!-- 우측 패널 -->
-    <aside class="w-full lg:w-80 flex flex-col gap-4">
-      <!-- 방금 뽑은 결과창 -->
-      <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col">
-        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-          <h3 class="font-jua text-lg text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-gift text-pink-500"></i>
-            <span>방금 뽑은 결과</span>
-          </h3>
-          <span id="turnTargetName" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md"></span>
-        </div>
-
-        <div id="recentResultList" class="flex flex-col gap-2 min-h-[160px] max-h-[240px] overflow-y-auto p-1 text-sm">
-          <div class="text-slate-400 text-xs text-center my-auto">
-            뽑기가 진행되면 이곳에 실시간으로 등수가 나타납니다.
-          </div>
-        </div>
-      </div>
-
-      <!-- 3:1 합성 규칙 -->
-      <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-4 border border-indigo-100 shadow-sm text-xs text-indigo-950">
-        <h4 class="font-jua text-sm text-indigo-700 mb-2 flex items-center gap-1.5">
-          <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
-          <span>스카이클래스 3:1 황금 교환 규칙</span>
-        </h4>
-        <div class="space-y-1 font-semibold text-slate-700 bg-white/80 p-3 rounded-2xl border border-indigo-50">
-          <div class="flex justify-between items-center">
-            <span>5등 3개</span> <i class="fa-solid fa-arrow-right text-indigo-400 text-[10px]"></i> <span class="font-bold text-blue-600">4등 1개</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span>4등 3개</span> <i class="fa-solid fa-arrow-right text-indigo-400 text-[10px]"></i> <span class="font-bold text-emerald-600">3등 1개</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span>3등 3개</span> <i class="fa-solid fa-arrow-right text-indigo-400 text-[10px]"></i> <span class="font-bold text-purple-600">2등 1개</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span>2등 3개</span> <i class="fa-solid fa-arrow-right text-indigo-400 text-[10px]"></i> <span class="font-bold text-amber-600">1등 1개 🎉</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 학생 개인 조회 진입 칩 목록 -->
-      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200 flex-1 flex flex-col">
-        <div class="flex items-center justify-between mb-2">
-          <h4 class="font-jua text-sm text-slate-700 flex items-center gap-1.5">
-            <i class="fa-solid fa-users text-indigo-500"></i>
-            <span>내 이름 누르고 현황 보기</span>
-          </h4>
-          <span class="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">학생용</span>
-        </div>
-        <p class="text-[11px] text-slate-400 mb-2">자기 이름을 클릭하면 개인 암호 입력 후 보유 현황을 확인할 수 있습니다.</p>
-        <div id="quickStudentChips" class="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto p-1"></div>
-      </div>
-    </aside>
-  </main>
-
-  <!-- [학생용 개인 조회 모달] -->
-  <div id="studentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-jua text-xl text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-id-badge text-emerald-500"></i>
-          <span>내 뽑기 보관함 (학생 개인용)</span>
-        </h3>
-        <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-      </div>
-
-      <!-- 1단계: PIN 인증 -->
-      <div id="studentAuthBox" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">내 이름 선택</label>
-          <select id="modalStudentSelect" onchange="handleModalStudentChange()" class="w-full border-2 border-slate-300 rounded-xl p-2.5 font-bold outline-none focus:border-emerald-500">
-            <option value="">-- 내 이름을 선택하세요 --</option>
-          </select>
-        </div>
-
-        <div id="pinInputArea" class="hidden">
-          <label id="pinLabel" class="block text-xs font-bold text-slate-600 mb-1">개인 비밀번호 (PIN 4자리)</label>
-          <input type="password" id="studentPinInput" maxlength="6" placeholder="비밀번호 입력" class="w-full border-2 border-slate-300 rounded-xl p-2.5 text-center font-bold tracking-widest text-lg outline-none focus:border-emerald-500" />
-          <p id="pinHelpText" class="text-[11px] text-slate-500 mt-1"></p>
-        </div>
-
-        <button id="authBtn" onclick="verifyOrSetPin()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition shadow hidden">
-          확인
-        </button>
-      </div>
-
-      <!-- 2단계: 결과 및 환산표 -->
-      <div id="studentDetailBox" class="hidden space-y-4">
-        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
-          <span class="text-xs text-emerald-700 font-bold">환영합니다!</span>
-          <h4 id="detailStudentName" class="font-jua text-2xl text-emerald-900"></h4>
-        </div>
-
-        <div class="grid grid-cols-5 gap-1.5 text-center">
-          <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
-            <div class="text-[10px] font-extrabold text-amber-700">1등</div>
-            <div id="detailR1" class="font-jua text-xl text-amber-900">0</div>
-          </div>
-          <div class="p-2.5 rounded-xl bg-purple-50 border border-purple-200">
-            <div class="text-[10px] font-extrabold text-purple-700">2등</div>
-            <div id="detailR2" class="font-jua text-xl text-purple-900">0</div>
-          </div>
-          <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
-            <div class="text-[10px] font-extrabold text-blue-700">3등</div>
-            <div id="detailR3" class="font-jua text-xl text-blue-900">0</div>
-          </div>
-          <div class="p-2.5 rounded-xl bg-teal-50 border border-teal-200">
-            <div class="text-[10px] font-extrabold text-teal-700">4등</div>
-            <div id="detailR4" class="font-jua text-xl text-teal-900">0</div>
-          </div>
-          <div class="p-2.5 rounded-xl bg-slate-100 border border-slate-200">
-            <div class="text-[10px] font-extrabold text-slate-600">5등</div>
-            <div id="detailR5" class="font-jua text-xl text-slate-800">0</div>
-          </div>
-        </div>
-
-        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs">
-          <div class="font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-            <i class="fa-solid fa-calculator text-indigo-500"></i>
-            <span>3:1 모아서 승급 시 교환 가능한 최고 등수:</span>
-          </div>
-          <div id="detailConversionSummary" class="text-slate-600 leading-relaxed font-semibold">
-            계산 중...
-          </div>
-        </div>
-
-        <button onclick="logoutStudentModal()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-sm transition">
-          닫기
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- [교사용 보안 인증 모달 (비밀번호: 0306)] -->
-  <div id="teacherAuthModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl border-2 border-amber-400 text-center">
-      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
-        <i class="fa-solid fa-key"></i>
-      </div>
-      <h3 class="font-jua text-xl text-slate-800 mb-1">교사 인증</h3>
-      <p class="text-xs text-slate-500 mb-4">선생님 전용 관리 비밀번호를 입력하세요.</p>
-      
-      <input type="password" id="teacherPassInput" maxlength="6" placeholder="비밀번호" class="w-full border-2 border-amber-300 focus:border-amber-500 rounded-xl p-2.5 text-center font-bold tracking-widest text-xl mb-4 outline-none" onkeyup="if(event.key==='Enter') checkTeacherPassword()" />
-      
-      <div class="flex gap-2">
-        <button onclick="closeTeacherAuthModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm transition">취소</button>
-        <button onclick="checkTeacherPassword()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-sm shadow transition">입장</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- [선생님 전용 관리 모달] -->
-  <div id="teacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-jua text-xl text-amber-900 flex items-center gap-2">
-          <i class="fa-solid fa-chalkboard-user text-amber-500"></i>
-          <span>선생님 뽑기 티켓 관리</span>
-        </h3>
-        <button onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-      </div>
-
-      <!-- 탭 -->
-      <div class="flex gap-2 p-1 bg-slate-100 rounded-2xl mb-4 font-bold text-sm">
-        <button id="tabAdd" onclick="switchTeacherTab('add')" class="flex-1 py-2 rounded-xl bg-amber-500 text-white shadow transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-plus-circle"></i>
-          <span>오프라인 티켓 추가</span>
-        </button>
-        <button id="tabDeduct" onclick="switchTeacherTab('deduct')" class="flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-minus-circle"></i>
-          <span>티켓 사용 (차감)</span>
-        </button>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">학생 선택</label>
-          <select id="teacherStudentSelect" onchange="renderTeacherStudentInfo()" class="w-full border-2 border-slate-300 rounded-xl p-2.5 font-bold outline-none focus:border-amber-500">
-            <option value="">-- 학생을 선택하세요 --</option>
-          </select>
-        </div>
-
-        <div id="teacherStudentInventory" class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3 text-xs">
-          <div class="font-bold text-amber-950 mb-1">현재 보유량:</div>
-          <div id="teacherStockText" class="text-slate-600">학생을 먼저 선택해 주세요.</div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">대상 등수</label>
-            <select id="manageRankSelect" class="w-full border-2 border-slate-300 rounded-xl p-2 font-bold outline-none">
-              <option value="1">1등</option>
-              <option value="2">2등</option>
-              <option value="3">3등</option>
-              <option value="4">4등</option>
-              <option value="5" selected>5등</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">수량 (개)</label>
-            <input type="number" id="manageCountInput" min="1" max="100" value="1" class="w-full border-2 border-slate-300 rounded-xl p-2 font-bold text-center outline-none" />
-          </div>
-        </div>
-
-        <button id="teacherActionBtn" onclick="submitTeacherAction()" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow flex items-center justify-center gap-2">
-          <i class="fa-solid fa-plus-circle"></i>
-          <span>오프라인 보유 티켓 추가하기</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 축하 모달 -->
-  <div id="celebrationModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-400">
-      <div class="text-6xl mb-3 animate-bounce">🎉</div>
-      <h2 id="celebTitle" class="font-jua text-3xl text-indigo-900 mb-1">대박 당첨!</h2>
-      <p id="celebDesc" class="font-bold text-slate-600 mb-6 text-lg"></p>
-      <button onclick="closeCelebrationModal()" class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-indigo-950 font-black py-3 rounded-2xl text-lg shadow-lg">
-        신난다! 확인 🚀
-      </button>
-    </div>
-  </div>
-
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxy1GF_hpjSD1V4ScETKWFwC88FZhDJ5V_BNr8G4CkRJB5yWpf6ZXQPczGFJKmMFmbt/exec";
-
-    // 6학년 3반 23명 기본 명단
-    const DEFAULT_CLASS_STUDENTS = [
-      "고혜리", "김다인", "김채은", "김태유", "박민하", "박주아", "신아인", "옥윤서", "이여주", "최연지", "홍예서",
-      "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
-    ];
-
-    let appState = {
-      board: [],
-      remaining: {},
-      unpickedCount: 200,
-      students: DEFAULT_CLASS_STUDENTS.map(name => ({
-        name,
-        hasPin: false,
-        rank1: 0,
-        rank2: 0,
-        rank3: 0,
-        rank4: 0,
-        rank5: 0
-      })),
-      isPicking: false,
-      currentStudent: "",
-      allowedCount: 0,
-      currentPickedCount: 0,
-      activeModalStudent: null,
-      teacherMode: "add"
-    };
-
-    const RANK_COLORS = {
-      1: { badge: "bg-amber-100 text-amber-800 border-amber-300", icon: "👑" },
-      2: { badge: "bg-purple-100 text-purple-800 border-purple-300", icon: "🥈" },
-      3: { badge: "bg-blue-100 text-blue-800 border-blue-300", icon: "🥉" },
-      4: { badge: "bg-teal-100 text-teal-800 border-teal-300", icon: "🎁" },
-      5: { badge: "bg-slate-100 text-slate-700 border-slate-300", icon: "🍬" }
-    };
-
-    async function fetchStatus(isManual = false) {
-      const icon = document.getElementById("refreshIcon");
-      if (icon) icon.classList.add("fa-spin");
-
-      try {
-        const res = await fetch(`${API_URL}?action=getStatus&t=${Date.now()}`);
-        const data = await res.json();
-
-        appState.board = data.board || [];
-        appState.remaining = data.remaining || {};
-        appState.unpickedCount = data.unpickedCount ?? 200;
-
-        if (data.students && data.students.length > 0) {
-          const remoteMap = new Map(data.students.map(s => [s.name, s]));
-          appState.students = DEFAULT_CLASS_STUDENTS.map(name => {
-            if (remoteMap.has(name)) return remoteMap.get(name);
-            return { name, hasPin: false, rank1: 0, rank2: 0, rank3: 0, rank4: 0, rank5: 0 };
-          });
-        }
-
-        renderStats();
-        renderBoard();
-        renderStudentDropdowns();
-        renderQuickChips();
-
-      } catch (err) {
-        console.error("데이터 로드 에러:", err);
-      } finally {
-        if (icon) icon.classList.remove("fa-spin");
+    const remaining = {1:0, 2:0, 3:0, 4:0, 5:0};
+    let unpickedCount = 0;
+    boardData.forEach(row => {
+      if (!row[2]) {
+        remaining[row[1]]++;
+        unpickedCount++;
       }
-    }
-
-    function renderStats() {
-      const total = appState.unpickedCount || 1;
-      const bar = document.getElementById("statsBar");
-
-      const items = [1, 2, 3, 4, 5].map(rank => {
-        const cnt = appState.remaining[rank] || 0;
-        const pct = ((cnt / total) * 100).toFixed(1);
-        return `
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10">
-            <span class="font-jua text-yellow-300">${rank}등</span>
-            <span class="font-bold text-white">${cnt}개</span>
-            <span class="text-[11px] text-indigo-200">(${pct}%)</span>
-          </div>
-        `;
-      }).join("");
-
-      bar.innerHTML = `
-        <div class="flex items-center gap-2 border-r border-indigo-400/40 pr-3 mr-1">
-          <span class="text-xs text-indigo-200 font-bold">남은 칸:</span>
-          <span class="font-jua text-base text-yellow-400">${appState.unpickedCount} / 200</span>
-        </div>
-        ${items}
-      `;
-    }
-
-    function renderBoard() {
-      const grid = document.getElementById("boardGrid");
-      grid.innerHTML = "";
-
-      appState.board.forEach((slot, index) => {
-        const slotNum = index + 1;
-        const card = document.createElement("div");
-        card.id = `slot-${slotNum}`;
-
-        if (slot.picked) {
-          card.className = "slot-card picked h-12 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 flex flex-col items-center justify-center text-xs font-bold cursor-not-allowed";
-          card.innerHTML = `
-            <span class="text-[10px] text-slate-400">#${slotNum}</span>
-            <span class="text-[11px] font-extrabold text-slate-500">${slot.prize ? slot.prize + "등" : "빈칸"}</span>
-          `;
-        } else {
-          card.className = "slot-card h-12 rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-white to-indigo-50 text-indigo-700 flex flex-col items-center justify-center font-jua text-sm shadow-sm cursor-pointer";
-          card.innerHTML = `
-            <span class="text-[9px] font-sans text-indigo-400 font-bold">#${slotNum}</span>
-            <span class="text-sm">뽑기</span>
-          `;
-          card.onclick = () => onSlotClick(slotNum, card);
-        }
-
-        grid.appendChild(card);
-      });
-    }
-
-    function renderStudentDropdowns() {
-      const sel = document.getElementById("studentSelect");
-      const modalSel = document.getElementById("modalStudentSelect");
-      const teacherSel = document.getElementById("teacherStudentSelect");
-
-      const currVal = sel.value;
-      const modalVal = modalSel.value;
-      const teacherVal = teacherSel.value;
-
-      const opts = `<option value="">-- 학생 선택 --</option>` +
-        appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-
-      sel.innerHTML = opts;
-      modalSel.innerHTML = `<option value="">-- 내 이름 선택 --</option>` +
-        appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-      teacherSel.innerHTML = `<option value="">-- 학생 선택 --</option>` +
-        appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
-
-      sel.value = currVal;
-      modalSel.value = modalVal;
-      teacherSel.value = teacherVal;
-    }
-
-    function renderQuickChips() {
-      const container = document.getElementById("quickStudentChips");
-      container.innerHTML = "";
-
-      appState.students.forEach(s => {
-        const chip = document.createElement("button");
-        chip.className = "px-2.5 py-1 bg-slate-100 hover:bg-emerald-100 active:scale-95 text-slate-700 hover:text-emerald-800 rounded-lg text-xs font-bold transition border border-slate-200 flex items-center gap-1";
-        chip.innerHTML = `<span>${s.name}</span><i class="fa-solid fa-lock text-[9px] text-slate-400"></i>`;
-        chip.onclick = () => openStudentModalWithName(s.name);
-        container.appendChild(chip);
-      });
-    }
-
-    function startPickingSession() {
-      const name = document.getElementById("studentSelect").value;
-      const count = parseInt(document.getElementById("pickCountSelect").value, 10);
-
-      if (!name) return alert("먼저 학생 이름을 선택해주세요!");
-      if (appState.unpickedCount === 0) return alert("모든 뽑기가 소진되었습니다!");
-
-      appState.isPicking = true;
-      appState.currentStudent = name;
-      appState.allowedCount = count;
-      appState.currentPickedCount = 0;
-
-      document.getElementById("turnTargetName").innerText = `${name} 학생`;
-      document.getElementById("recentResultList").innerHTML = "";
-
-      updateSessionCounter();
-    }
-
-    function updateSessionCounter() {
-      const statusEl = document.getElementById("sessionStatus");
-      const left = appState.allowedCount - appState.currentPickedCount;
-
-      if (appState.isPicking) {
-        statusEl.className = "flex items-center gap-2 font-jua text-base px-4 py-1 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 animate-pulse";
-        statusEl.innerHTML = `<i class="fa-solid fa-hand-pointer text-amber-600"></i><span>${appState.currentStudent} 학생: 남은 뽑기 ${left}개!</span>`;
-      } else {
-        statusEl.className = "flex items-center gap-2 font-jua text-base px-4 py-1 rounded-xl bg-white border border-indigo-200 text-indigo-700";
-        statusEl.innerHTML = `<i class="fa-regular fa-circle-check text-emerald-500"></i><span>뽑기 완료! 다음 학생을 선택하세요.</span>`;
-      }
-    }
-
-    async function onSlotClick(slotNum, cardElement) {
-      if (!appState.isPicking) return alert("상단의 [학생 선택] 후 [뽑기 시작] 버튼을 먼저 눌러주세요!");
-      if (cardElement.classList.contains("picked") || cardElement.classList.contains("disabled")) return;
-
-      cardElement.classList.add("tear-effect", "disabled");
-      appState.currentPickedCount++;
-      updateSessionCounter();
-
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            action: "pick",
-            studentName: appState.currentStudent,
-            slotIds: [slotNum]
-          })
-        });
-        const data = await res.json();
-
-        if (data.success && data.results && data.results.length > 0) {
-          const resItem = data.results[0];
-          const prize = resItem.prize;
-
-          cardElement.classList.remove("tear-effect", "disabled");
-          cardElement.classList.add("picked");
-          cardElement.innerHTML = `
-            <span class="text-[9px] text-slate-400">#${slotNum}</span>
-            <span class="text-xs font-black text-indigo-900">${prize}등</span>
-          `;
-
-          appendRecentResult(slotNum, prize, appState.currentStudent);
-
-          if (prize === 1 || prize === 2) {
-            showCelebration(appState.currentStudent, prize);
-          }
-
-          if (data.autoReset) {
-            setTimeout(() => {
-              alert("🎉 200개의 뽑기판이 모두 소진되어 새로운 판으로 자동 리셋되었습니다!");
-              fetchStatus();
-            }, 800);
-          }
-        }
-      } catch (err) {
-        console.error("뽑기 오류:", err);
-      }
-
-      if (appState.currentPickedCount >= appState.allowedCount) {
-        appState.isPicking = false;
-        updateSessionCounter();
-        setTimeout(() => fetchStatus(), 600);
-      }
-    }
-
-    function appendRecentResult(slotNum, prize, studentName) {
-      const list = document.getElementById("recentResultList");
-      const item = document.createElement("div");
-      const color = RANK_COLORS[prize] || { badge: "bg-slate-100 text-slate-800", icon: "✨" };
-
-      item.className = `p-2.5 rounded-2xl border flex items-center justify-between shadow-sm ${color.badge}`;
-      item.innerHTML = `
-        <div class="flex items-center gap-2">
-          <span class="text-base">${color.icon}</span>
-          <span class="font-extrabold text-sm">${prize}등 당첨!</span>
-        </div>
-        <span class="text-xs font-bold opacity-75">#${slotNum}번 칸</span>
-      `;
-      list.prepend(item);
-    }
-
-    function showCelebration(name, rank) {
-      const modal = document.getElementById("celebrationModal");
-      const title = document.getElementById("celebTitle");
-      const desc = document.getElementById("celebDesc");
-
-      if (rank === 1) {
-        title.innerText = "👑 1등 당첨 대폭발!!";
-        desc.innerText = `${name} 학생이 귀한 1등에 당첨되었습니다!`;
-      } else {
-        title.innerText = "🥈 2등 당첨 축하합니다!";
-        desc.innerText = `${name} 학생이 2등에 당첨되었습니다!`;
-      }
-      modal.classList.remove("hidden");
-    }
-
-    function closeCelebrationModal() {
-      document.getElementById("celebrationModal").classList.add("hidden");
-    }
-
-    function calculateMaxUpgrades(r5, r4, r3, r2) {
-      const canMake4 = Math.floor(r5 / 3);
-      const total4 = r4 + canMake4;
-      const canMake3 = Math.floor(total4 / 3);
-      const total3 = r3 + canMake3;
-      const canMake2 = Math.floor(total3 / 3);
-      const total2 = r2 + canMake2;
-      const canMake1 = Math.floor(total2 / 3);
-      return { canMake1, canMake2, canMake3, canMake4 };
-    }
-
-    // [학생 개인 조회 모달]
-    function openStudentModal() {
-      document.getElementById("studentModal").classList.remove("hidden");
-      document.getElementById("studentAuthBox").classList.remove("hidden");
-      document.getElementById("studentDetailBox").classList.add("hidden");
-      document.getElementById("pinInputArea").classList.add("hidden");
-      document.getElementById("authBtn").classList.add("hidden");
-      document.getElementById("studentPinInput").value = "";
-    }
-
-    function openStudentModalWithName(name) {
-      openStudentModal();
-      const sel = document.getElementById("modalStudentSelect");
-      sel.value = name;
-      handleModalStudentChange();
-    }
-
-    function closeStudentModal() {
-      document.getElementById("studentModal").classList.add("hidden");
-    }
-
-    function handleModalStudentChange() {
-      const name = document.getElementById("modalStudentSelect").value;
-      if (!name) {
-        document.getElementById("pinInputArea").classList.add("hidden");
-        document.getElementById("authBtn").classList.add("hidden");
-        return;
-      }
-
-      const student = appState.students.find(s => s.name === name);
-      const pinArea = document.getElementById("pinInputArea");
-      const authBtn = document.getElementById("authBtn");
-      const pinLabel = document.getElementById("pinLabel");
-      const help = document.getElementById("pinHelpText");
-
-      pinArea.classList.remove("hidden");
-      authBtn.classList.remove("hidden");
-      document.getElementById("studentPinInput").value = "";
-
-      if (student && student.hasPin) {
-        pinLabel.innerText = "개인 비밀번호 입력";
-        help.innerText = "설정한 개인 암호를 입력하세요.";
-        authBtn.innerText = "보관함 열기";
-      } else {
-        pinLabel.innerText = "개인 비밀번호 최초 설정 (4자리 권장)";
-        help.innerText = "처음 확인하는 학생입니다! 앞으로 사용할 암호를 설정하세요.";
-        authBtn.innerText = "비밀번호 설정 및 조회";
-      }
-    }
-
-    async function verifyOrSetPin() {
-      const name = document.getElementById("modalStudentSelect").value;
-      const pin = document.getElementById("studentPinInput").value.trim();
-      const student = appState.students.find(s => s.name === name);
-
-      if (!name || !pin) return alert("이름과 비밀번호를 모두 입력해주세요!");
-
-      const action = (student && student.hasPin) ? "verifyPin" : "setPin";
-
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ action, studentName: name, pin })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          showStudentDetails(student);
-          if (action === "setPin") {
-            student.hasPin = true;
-            alert("비밀번호가 성공적으로 설정되었습니다!");
-          }
-        } else {
-          alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요.");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("확인 중 통신 오류가 발생했습니다.");
-      }
-    }
-
-    function showStudentDetails(student) {
-      document.getElementById("studentAuthBox").classList.add("hidden");
-      document.getElementById("studentDetailBox").classList.remove("hidden");
-
-      document.getElementById("detailStudentName").innerText = `${student.name}의 보관함`;
-      document.getElementById("detailR1").innerText = student.rank1 || 0;
-      document.getElementById("detailR2").innerText = student.rank2 || 0;
-      document.getElementById("detailR3").innerText = student.rank3 || 0;
-      document.getElementById("detailR4").innerText = student.rank4 || 0;
-      document.getElementById("detailR5").innerText = student.rank5 || 0;
-
-      const upgrades = calculateMaxUpgrades(student.rank5 || 0, student.rank4 || 0, student.rank3 || 0, student.rank2 || 0);
-      const summEl = document.getElementById("detailConversionSummary");
-
-      summEl.innerHTML = `
-        <ul class="list-disc pl-4 space-y-1">
-          <li>모든 티켓을 승급 시 <strong class="text-amber-600">1등 최대 ${upgrades.canMake1}개</strong>까지 교환 가능!</li>
-          <li>2등으로만 모을 경우: 최대 <strong class="text-purple-600">${upgrades.canMake2}개</strong></li>
-          <li>3등으로만 모을 경우: 최대 <strong class="text-blue-600">${upgrades.canMake3}개</strong></li>
-          <li>4등으로만 모을 경우: 최대 <strong class="text-teal-600">${upgrades.canMake4}개</strong></li>
-        </ul>
-      `;
-    }
-
-    function logoutStudentModal() {
-      openStudentModal();
-    }
-
-    // [교사 보안 인증: 비밀번호 0306]
-    function promptTeacherAccess() {
-      document.getElementById("teacherAuthModal").classList.remove("hidden");
-      document.getElementById("teacherPassInput").value = "";
-      setTimeout(() => document.getElementById("teacherPassInput").focus(), 100);
-    }
-
-    function closeTeacherAuthModal() {
-      document.getElementById("teacherAuthModal").classList.add("hidden");
-    }
-
-    function checkTeacherPassword() {
-      const pass = document.getElementById("teacherPassInput").value.trim();
-      if (pass === "0306") {
-        closeTeacherAuthModal();
-        openTeacherModal();
-      } else {
-        alert("교사 비밀번호가 일치하지 않습니다!");
-        document.getElementById("teacherPassInput").value = "";
-      }
-    }
-
-    // [선생님 전용 관리 모달]
-    function openTeacherModal() {
-      document.getElementById("teacherModal").classList.remove("hidden");
-      renderTeacherStudentInfo();
-    }
-
-    function closeTeacherModal() {
-      document.getElementById("teacherModal").classList.add("hidden");
-    }
-
-    function switchTeacherTab(mode) {
-      appState.teacherMode = mode;
-      const tabAdd = document.getElementById("tabAdd");
-      const tabDeduct = document.getElementById("tabDeduct");
-      const actionBtn = document.getElementById("teacherActionBtn");
-
-      if (mode === "add") {
-        tabAdd.className = "flex-1 py-2 rounded-xl bg-amber-500 text-white shadow transition flex items-center justify-center gap-1.5";
-        tabDeduct.className = "flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5";
-        actionBtn.className = "w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow flex items-center justify-center gap-2";
-        actionBtn.innerHTML = `<i class="fa-solid fa-plus-circle"></i><span>오프라인 보유 티켓 추가하기</span>`;
-      } else {
-        tabDeduct.className = "flex-1 py-2 rounded-xl bg-rose-500 text-white shadow transition flex items-center justify-center gap-1.5";
-        tabAdd.className = "flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5";
-        actionBtn.className = "w-full bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow flex items-center justify-center gap-2";
-        actionBtn.innerHTML = `<i class="fa-solid fa-minus-circle"></i><span>티켓 사용 처리 (차감하기)</span>`;
-      }
-    }
-
-    function renderTeacherStudentInfo() {
-      const name = document.getElementById("teacherStudentSelect").value;
-      const textEl = document.getElementById("teacherStockText");
-      if (!name) {
-        textEl.innerText = "학생을 먼저 선택해 주세요.";
-        return;
-      }
-      const student = appState.students.find(s => s.name === name);
-      if (!student) return;
-
-      textEl.innerHTML = `
-        <span class="font-bold text-slate-800">${name} 학생:</span>
-        1등: <b>${student.rank1 || 0}개</b> |
-        2등: <b>${student.rank2 || 0}개</b> |
-        3등: <b>${student.rank3 || 0}개</b> |
-        4등: <b>${student.rank4 || 0}개</b> |
-        5등: <b>${student.rank5 || 0}개</b>
-      `;
-    }
-
-    async function submitTeacherAction() {
-      const name = document.getElementById("teacherStudentSelect").value;
-      const rank = parseInt(document.getElementById("manageRankSelect").value, 10);
-      const count = parseInt(document.getElementById("manageCountInput").value, 10);
-      const isAdd = appState.teacherMode === "add";
-
-      if (!name) return alert("학생을 선택하세요!");
-      if (isNaN(count) || count <= 0) return alert("올바른 수량을 입력하세요!");
-
-      const student = appState.students.find(s => s.name === name);
-      const currentStock = student ? (student[`rank${rank}`] || 0) : 0;
-
-      if (!isAdd && currentStock < count) {
-        if (!confirm(`해당 학생은 현재 ${rank}등 티켓을 ${currentStock}개 보유 중입니다. 그래도 ${count}개를 차감하시겠습니까?`)) {
-          return;
-        }
-      }
-
-      try {
-        const actionType = isAdd ? "addTicket" : "deduct";
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            action: actionType,
-            studentName: name,
-            rank: rank,
-            count: count
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          const actionWord = isAdd ? "추가" : "차감";
-          alert(`${name} 학생에게 ${rank}등 티켓 ${count}개가 성공적으로 ${actionWord}되었습니다.`);
-          
-          if (student) {
-            if (isAdd) {
-              student[`rank${rank}`] = (student[`rank${rank}`] || 0) + count;
-            } else {
-              student[`rank${rank}`] = Math.max(0, (student[`rank${rank}`] || 0) - count);
-            }
-          }
-          renderTeacherStudentInfo();
-          fetchStatus();
-        } else {
-          alert("처리 실패: " + (data.message || "오류"));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("처리 중 통신 오류가 발생했습니다.");
-      }
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      renderStudentDropdowns();
-      renderQuickChips();
-      fetchStatus();
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('student') === 'true' || window.location.hash === '#student') {
-        openStudentModal();
-      }
-
-      setInterval(() => {
-        if (!appState.isPicking) fetchStatus();
-      }, 30000);
     });
-  </script>
-</body>
-</html>
+    
+    const students = studentsData.map(r => ({
+      name: String(r[0]),
+      hasPin: !!r[1],
+      rank1: Number(r[2]) || 0,
+      rank2: Number(r[3]) || 0,
+      rank3: Number(r[4]) || 0,
+      rank4: Number(r[5]) || 0,
+      rank5: Number(r[6]) || 0
+    }));
+    
+    return jsonResponse({
+      board: boardData.map(r => ({ id: r[0], picked: r[2], prize: r[2] ? r[1] : null, picked_by: r[3] })),
+      remaining,
+      unpickedCount,
+      students
+    });
+  }
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+    
+    if (action === "pick") {
+      const studentName = data.studentName;
+      const slotIds = data.slotIds;
+      const boardRange = BOARD_SHEET.getDataRange();
+      const boardData = boardRange.getValues();
+      const results = [];
+      
+      slotIds.forEach(id => {
+        const rowIdx = id;
+        if (!boardData[rowIdx][2]) {
+          boardData[rowIdx][2] = true;
+          boardData[rowIdx][3] = studentName;
+          results.push({ id, prize: boardData[rowIdx][1] });
+        }
+      });
+      BOARD_SHEET.getRange(1, 1, boardData.length, 4).setValues(boardData);
+      
+      const studentsData = STUDENTS_SHEET.getDataRange().getValues();
+      let sIdx = -1;
+      for (let i = 1; i < studentsData.length; i++) {
+        if (studentsData[i][0] === studentName) { sIdx = i; break; }
+      }
+      if (sIdx !== -1) {
+        results.forEach(r => {
+          studentsData[sIdx][1 + r.prize] = (Number(studentsData[sIdx][1 + r.prize]) || 0) + 1;
+        });
+        STUDENTS_SHEET.getRange(1, 1, studentsData.length, 7).setValues(studentsData);
+      }
+      
+      const totalUnpicked = boardData.slice(1).filter(r => !r[2]).length;
+      if (totalUnpicked === 0) {
+        initBoard();
+      }
+      return jsonResponse({ success: true, results, autoReset: totalUnpicked === 0 });
+    }
+    
+    if (action === "addTicket") {
+      const { studentName, rank, count } = data;
+      const studentsData = STUDENTS_SHEET.getDataRange().getValues();
+      for (let i = 1; i < studentsData.length; i++) {
+        if (studentsData[i][0] === studentName) {
+          const col = 1 + rank;
+          studentsData[i][col] = (Number(studentsData[i][col]) || 0) + count;
+          break;
+        }
+      }
+      STUDENTS_SHEET.getRange(1, 1, studentsData.length, 7).setValues(studentsData);
+      return jsonResponse({ success: true });
+    }
+
+    // 스마트 3:1 자동 차감 로직 반영
+    if (action === "deduct") {
+      const { studentName, rank, count } = data;
+      const studentsData = STUDENTS_SHEET.getDataRange().getValues();
+      let sIdx = -1;
+      for (let i = 1; i < studentsData.length; i++) {
+        if (studentsData[i][0] === studentName) { sIdx = i; break; }
+      }
+      
+      if (sIdx !== -1) {
+        let stock = {
+          1: Number(studentsData[sIdx][2]) || 0,
+          2: Number(studentsData[sIdx][3]) || 0,
+          3: Number(studentsData[sIdx][4]) || 0,
+          4: Number(studentsData[sIdx][5]) || 0,
+          5: Number(studentsData[sIdx][6]) || 0
+        };
+        
+        function borrowAndDeduct(r, c) {
+          if (stock[r] >= c) {
+            stock[r] -= c;
+            return true;
+          }
+          if (r >= 5) return false;
+          let deficit = c - stock[r];
+          let neededLower = deficit * 3;
+          if (!borrowAndDeduct(r + 1, neededLower)) return false;
+          stock[r] += deficit;
+          stock[r] -= c;
+          return true;
+        }
+        
+        if (!borrowAndDeduct(Number(rank), Number(count))) {
+          return jsonResponse({ success: false, message: "보유한 티켓 총량이 부족합니다!" });
+        }
+        
+        studentsData[sIdx][2] = stock[1];
+        studentsData[sIdx][3] = stock[2];
+        studentsData[sIdx][4] = stock[3];
+        studentsData[sIdx][5] = stock[4];
+        studentsData[sIdx][6] = stock[5];
+        STUDENTS_SHEET.getRange(1, 1, studentsData.length, 7).setValues(studentsData);
+        return jsonResponse({ success: true });
+      }
+      return jsonResponse({ success: false, message: "학생을 찾을 수 없습니다." });
+    }
+    
+    if (action === "verifyPin" || action === "setPin") {
+      const { studentName, pin } = data;
+      const studentsData = STUDENTS_SHEET.getDataRange().getValues();
+      for (let i = 1; i < studentsData.length; i++) {
+        if (studentsData[i][0] === studentName) {
+          if (action === "setPin" && !studentsData[i][1]) {
+            studentsData[i][1] = pin;
+            STUDENTS_SHEET.getRange(1, 1, studentsData.length, 7).setValues(studentsData);
+            return jsonResponse({ success: true });
+          } else if (action === "verifyPin") {
+            const valid = String(studentsData[i][1]) === String(pin);
+            return jsonResponse({ success: valid });
+          }
+        }
+      }
+      return jsonResponse({ success: false, message: "학생 정보를 찾을 수 없습니다." });
+    }
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
