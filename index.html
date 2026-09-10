@@ -57,16 +57,6 @@
           <h1 class="font-jua text-2xl tracking-wide text-yellow-300 drop-shadow">날아올라라 스카이클래스!</h1>
           <p class="text-[11px] text-emerald-200">6학년 3반 200칸 전자칠판 뽑기판</p>
         </div>
-        
-        <!-- 풍성한 5트랙 BGM 토글 & 볼륨 슬라이더 -->
-        <div class="ml-2 flex items-center gap-2 bg-emerald-800/80 px-3 py-1.5 rounded-xl border border-emerald-400/50">
-          <button id="bgmToggleBtn" onclick="toggleBGM(event)" class="active:scale-95 text-xs font-bold flex items-center gap-1.5 transition">
-            <i id="bgmIcon" class="fa-solid fa-volume-xmark text-yellow-300"></i>
-            <span id="bgmText">BGM</span>
-          </button>
-          <input type="range" id="bgmVolumeSlider" min="0" max="100" value="15" oninput="changeBgmVolume(this.value)" onclick="event.stopPropagation()" class="w-16 accent-yellow-300 cursor-pointer" title="배경음 볼륨 조절" />
-          <span id="bgmTrackName" class="text-[10px] text-emerald-200 font-bold hidden sm:inline-block">테마 1: 활기찬 마을</span>
-        </div>
       </div>
 
       <div id="sessionStatus" class="flex items-center gap-2 font-jua text-base py-1.5 px-4 rounded-xl bg-white/10 backdrop-blur border border-white/20 text-white shadow-sm">
@@ -434,7 +424,7 @@
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // 🎵 5곡의 버라이어티 풍성한 BGM 플레이리스트 & Web Audio 신시사이저
+    // 효과음 볼륨 하향 조정 및 5트랙 BGM 플레이리스트
     const SoundFX = {
       ctx: null,
       bgmGain: null,
@@ -443,7 +433,6 @@
       trackIndex: 0,
       noteIndex: 0,
 
-      // 5가지의 다른 분위기를 가진 멜로디 트랙 모음
       tracks: [
         {
           name: "테마 1: 활기찬 모험 (C 메이저)",
@@ -513,7 +502,8 @@
       playNextLoop() {
         if (!this.isBgmPlaying) return;
         const curTrack = this.tracks[this.trackIndex];
-        document.getElementById("bgmTrackName").innerText = curTrack.name;
+        const trackNameEl = document.getElementById("bgmTrackName");
+        if (trackNameEl) trackNameEl.innerText = curTrack.name;
 
         const freq = curTrack.notes[this.noteIndex];
         if (freq > 0 && this.ctx) {
@@ -534,7 +524,7 @@
         this.noteIndex++;
         if (this.noteIndex >= curTrack.notes.length) {
           this.noteIndex = 0;
-          this.trackIndex = (this.trackIndex + 1) % this.tracks.length; // 다음 곡으로 자연스럽게 전환!
+          this.trackIndex = (this.trackIndex + 1) % this.tracks.length;
         }
 
         this.bgmTimer = setTimeout(() => this.playNextLoop(), curTrack.bpm);
@@ -570,7 +560,7 @@
         const gain = this.ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(550 + Math.random() * 250, now);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.06);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.06);
         gain.gain.setValueAtTime(0.05, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
         osc.connect(gain);
@@ -629,29 +619,22 @@
       }
     }
 
-    // JSONP 스크립트 인젝션 (구글 리디렉션 및 CORS 100% 회피 전송)
+    // CORS 차단 완전 회피형 전송 헬퍼
     function forceSendToSheet(params) {
-      const script = document.createElement("script");
-      const cbName = "cb_" + Math.floor(Math.random() * 1000000);
-      params.callback = cbName;
-      
-      window[cbName] = function(res) {
-        try { document.body.removeChild(script); } catch(e){}
-        delete window[cbName];
-      };
-
       const qs = new URLSearchParams(params).toString();
-      script.src = `${API_URL}?${qs}`;
-      document.body.appendChild(script);
-
+      const fullUrl = `${API_URL}?${qs}`;
+      
       try {
-        fetch(`${API_URL}?${qs}`, { method: "GET", mode: "no-cors" });
-      } catch(e){}
+        fetch(fullUrl, { method: "GET", mode: "no-cors" });
+      } catch (e) {}
+
+      const img = new Image();
+      img.src = fullUrl;
     }
 
-    const STORAGE_KEY_BOARD = "skyclass_board_v10";
-    const STORAGE_KEY_LOGS = "skyclass_logs_v10";
-    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v10";
+    const STORAGE_KEY_BOARD = "skyclass_board_v11";
+    const STORAGE_KEY_LOGS = "skyclass_logs_v11";
+    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v11";
 
     function generateStrictInitialBoard() {
       let pool = [];
@@ -699,7 +682,7 @@
       currentStudent: "",
       allowedCount: 0,
       currentPickedCount: 0,
-      isProcessing: false, // 2. 연타 버그 방지 락
+      isProcessing: false,
       editingCell: null
     };
 
@@ -750,7 +733,6 @@
       }
     }
 
-    // 1. 뽑기판 초기화 기능 (암호 0306 검증)
     function promptResetBoard() {
       document.getElementById("resetConfirmModal").classList.remove("hidden");
       document.getElementById("resetPassInput").value = "";
@@ -856,9 +838,8 @@
       if (icon) icon.classList.add("fa-spin");
 
       try {
-        const url = getApiUrl();
         const qs = new URLSearchParams({ action: "getStatus", t: Date.now() }).toString();
-        const res = await fetch(`${url}?${qs}`);
+        const res = await fetch(`${API_URL}?${qs}`);
         const data = await res.json();
         if (data && data.success) {
           if (data.students && data.students.length > 0) {
@@ -1283,8 +1264,6 @@
 
     function openTeacherMatrixModal() {
       document.getElementById("teacherMatrixModal").classList.remove("hidden");
-      document.getElementById("customApiUrlInput").value = getApiUrl();
-      document.getElementById("sheetTestResult").innerText = "";
       renderTeacherTable();
     }
 
