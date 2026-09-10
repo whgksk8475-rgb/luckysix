@@ -424,26 +424,16 @@
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // 효과음 전용 신시사이저 (BGM 없음)
     const SoundFX = {
       ctx: null,
-      
       init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            this.ctx = new AudioContext();
-          }
+          if (AudioContext) this.ctx = new AudioContext();
         }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
       },
-
-      unlockAudio() {
-        this.init();
-      },
-
+      unlockAudio() { this.init(); },
       playTear() {
         this.init();
         if (!this.ctx) return;
@@ -460,7 +450,6 @@
         osc.start(now);
         osc.stop(now + 0.11);
       },
-
       playRapidPop() {
         this.init();
         if (!this.ctx) return;
@@ -477,7 +466,6 @@
         osc.start(now);
         osc.stop(now + 0.06);
       },
-
       playWin(rank) {
         this.init();
         if (!this.ctx) return;
@@ -501,21 +489,18 @@
       }
     };
 
+    // ✨ 중복 전송(2배 증가) 버그를 막기 위해 하나의 깔끔한 GET 요청으로 통합
     function forceSendToSheet(params) {
       const qs = new URLSearchParams(params).toString();
       const fullUrl = `${API_URL}?${qs}`;
-      
       try {
         fetch(fullUrl, { method: "GET", mode: "no-cors" });
       } catch (e) {}
-
-      const img = new Image();
-      img.src = fullUrl;
     }
 
-    const STORAGE_KEY_BOARD = "skyclass_board_v12";
-    const STORAGE_KEY_LOGS = "skyclass_logs_v12";
-    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v12";
+    const STORAGE_KEY_BOARD = "skyclass_board_v13";
+    const STORAGE_KEY_LOGS = "skyclass_logs_v13";
+    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v13";
 
     function generateStrictInitialBoard() {
       let pool = [];
@@ -563,8 +548,7 @@
       currentStudent: "",
       allowedCount: 0,
       currentPickedCount: 0,
-      isProcessing: false,
-      editingCell: null
+      isProcessing: false
     };
 
     function recalculateStats() {
@@ -663,7 +647,6 @@
     function renderBoard() {
       const grid = document.getElementById("boardGrid");
       grid.innerHTML = "";
-
       appState.board.forEach((slot, index) => {
         const slotNum = index + 1;
         const card = document.createElement("div");
@@ -671,20 +654,13 @@
 
         if (slot.picked) {
           card.className = "slot-card picked h-12 rounded-xl bg-slate-200/90 border border-slate-300 text-slate-500 flex flex-col items-center justify-center text-xs font-bold cursor-not-allowed select-none";
-          card.innerHTML = `
-            <span class="text-[9px] text-slate-400">#${slotNum}</span>
-            <span class="text-[11px] font-extrabold text-slate-700">${slot.prize ? slot.prize + "등" : "소진"}</span>
-          `;
+          card.innerHTML = `<span class="text-[9px] text-slate-400">#${slotNum}</span><span class="text-[11px] font-extrabold text-slate-700">${slot.prize ? slot.prize + "등" : "소진"}</span>`;
         } else {
           const hoverClass = appState.isPicking ? "active-hover cursor-pointer" : "cursor-pointer opacity-95";
           card.className = `slot-card h-12 rounded-xl border-2 border-emerald-300 bg-gradient-to-br from-white to-emerald-50 text-emerald-800 flex flex-col items-center justify-center font-jua text-sm shadow-sm ${hoverClass}`;
-          card.innerHTML = `
-            <span class="text-[9px] font-sans text-emerald-500 font-bold">#${slotNum}</span>
-            <span class="text-xs flex items-center gap-0.5"><i class="fa-solid fa-clover text-emerald-500 text-[10px]"></i> ${slotNum}</span>
-          `;
+          card.innerHTML = `<span class="text-[9px] font-sans text-emerald-500 font-bold">#${slotNum}</span><span class="text-xs flex items-center gap-0.5"><i class="fa-solid fa-clover text-emerald-500 text-[10px]"></i> ${slotNum}</span>`;
           card.onclick = () => onSlotClick(slotNum, card);
         }
-
         grid.appendChild(card);
       });
     }
@@ -692,26 +668,13 @@
     function renderStats() {
       const total = appState.unpickedCount || 1;
       const bar = document.getElementById("statsBar");
-
       const items = [1, 2, 3, 4, 5].map(rank => {
         const cnt = appState.remaining[rank] || 0;
         const pct = ((cnt / total) * 100).toFixed(1);
-        return `
-          <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/20 backdrop-blur">
-            <span class="font-jua text-yellow-300 text-sm">${rank}등</span>
-            <span class="font-bold text-white text-sm">${cnt}개</span>
-            <span class="text-[11px] text-emerald-200 font-medium">(${pct}%)</span>
-          </div>
-        `;
+        return `<div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/20 backdrop-blur"><span class="font-jua text-yellow-300 text-sm">${rank}등</span><span class="font-bold text-white text-sm">${cnt}개</span><span class="text-[11px] text-emerald-200 font-medium">(${pct}%)</span></div>`;
       }).join("");
 
-      bar.innerHTML = `
-        <div class="flex items-center gap-2 border-r border-emerald-500/60 pr-3 mr-1">
-          <span class="text-xs text-emerald-200 font-extrabold">남은 칸:</span>
-          <span class="font-jua text-base text-yellow-400 font-bold">${appState.unpickedCount} / 200</span>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">${items}</div>
-      `;
+      bar.innerHTML = `<div class="flex items-center gap-2 border-r border-emerald-500/60 pr-3 mr-1"><span class="text-xs text-emerald-200 font-extrabold">남은 칸:</span><span class="font-jua text-base text-yellow-400 font-bold">${appState.unpickedCount} / 200</span></div><div class="flex flex-wrap items-center gap-2">${items}</div>`;
     }
 
     async function fetchStatus(isManual = false) {
@@ -722,18 +685,16 @@
         const qs = new URLSearchParams({ action: "getStatus", t: Date.now() }).toString();
         const res = await fetch(`${API_URL}?${qs}`);
         const data = await res.json();
-        if (data && data.success) {
-          if (data.students && data.students.length > 0) {
-            const remoteMap = new Map(data.students.map(s => [s.name, s]));
-            appState.students = DEFAULT_CLASS_STUDENTS.map(name => {
-              if (remoteMap.has(name)) return remoteMap.get(name);
-              return { name, hasPin: false, rank1: 0, rank2: 0, rank3: 0, rank4: 0, rank5: 0 };
-            });
-          }
+        if (data && data.success && data.students) {
+          const remoteMap = new Map(data.students.map(s => [s.name, s]));
+          appState.students = DEFAULT_CLASS_STUDENTS.map(name => {
+            if (remoteMap.has(name)) return remoteMap.get(name);
+            return { name, hasPin: false, rank1: 0, rank2: 0, rank3: 0, rank4: 0, rank5: 0 };
+          });
           saveCurrentState();
         }
       } catch (err) {
-        console.warn("로컬 모드로 동작:", err);
+        console.warn("로컬 모드 동작:", err);
       } finally {
         if (icon) icon.classList.remove("fa-spin");
         recalculateStats();
@@ -747,15 +708,13 @@
     function renderStudentDropdowns() {
       const sel = document.getElementById("studentSelect");
       const currVal = sel.value;
-      sel.innerHTML = `<option value="">-- 학생 선택 --</option>` +
-        appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
+      sel.innerHTML = `<option value="">-- 학생 선택 --</option>` + appState.students.map(s => `<option value="${s.name}">${s.name}</option>`).join("");
       sel.value = currVal;
     }
 
     function renderQuickChips() {
       const container = document.getElementById("quickStudentChips");
       container.innerHTML = "";
-
       appState.students.forEach(s => {
         const chip = document.createElement("button");
         chip.className = "px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-100 active:scale-95 text-slate-700 hover:text-emerald-800 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center gap-1.5 shadow-sm";
@@ -765,7 +724,7 @@
       });
     }
 
-    // 선택 폼 초기화 (선택 실수 방지)
+    // ✨ 실수 방지용: 완료 후 이름 및 개수 자동 초기화
     function resetSelectionForm() {
       document.getElementById("studentSelect").value = "";
       document.getElementById("pickCountSelect").value = "5";
@@ -814,9 +773,7 @@
 
       appState.isPicking = false;
       const unpickedSlots = [];
-      appState.board.forEach((s, idx) => {
-        if (!s.picked) unpickedSlots.push(idx + 1);
-      });
+      appState.board.forEach((s, idx) => { if (!s.picked) unpickedSlots.push(idx + 1); });
 
       const chosenSlotNums = [];
       for (let i = 0; i < totalToPick; i++) {
@@ -853,13 +810,7 @@
         results.push({ slotNum, prize });
         appendRecentResult(slotNum, prize, appState.currentStudent);
 
-        forceSendToSheet({
-          action: "pick",
-          studentName: appState.currentStudent,
-          slotId: slotNum,
-          prize: prize
-        });
-
+        forceSendToSheet({ action: "pick", studentName: appState.currentStudent, slotId: slotNum, prize: prize });
         await new Promise(r => setTimeout(r, 140));
       }
 
@@ -884,17 +835,12 @@
       grid.innerHTML = "";
 
       const rankCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-
       results.forEach(res => {
         rankCounts[res.prize]++;
         const theme = RANK_THEMES[res.prize] || RANK_THEMES[5];
         const card = document.createElement("div");
         card.className = `p-3 rounded-2xl border-2 flex flex-col items-center justify-center shadow-sm ${theme.bg} ${theme.border}`;
-        card.innerHTML = `
-          <div class="text-2xl mb-1">${theme.icon}</div>
-          <div class="font-jua text-lg ${theme.text}">${res.prize}등 당첨!</div>
-          <div class="text-[10px] text-slate-500 font-bold">#${res.slotNum}번 칸</div>
-        `;
+        card.innerHTML = `<div class="text-2xl mb-1">${theme.icon}</div><div class="font-jua text-lg ${theme.text}">${res.prize}등 당첨!</div><div class="text-[10px] text-slate-500 font-bold">#${res.slotNum}번 칸</div>`;
         grid.appendChild(card);
       });
 
@@ -909,7 +855,7 @@
     function closeMultiRevealModal() {
       document.getElementById("multiRevealModal").classList.add("hidden");
       renderBoard();
-      resetSelectionForm(); // 완료 후 이름 및 개수 초기화
+      resetSelectionForm(); // ✨ 완료 후 학생/개수 초기화
     }
 
     function updateSessionCounter() {
@@ -940,7 +886,6 @@
       if (!prize) prize = (appState.remaining[5] > 0) ? 5 : 4;
 
       appState.currentPickedCount++;
-
       appState.board[slotIndex].picked = true;
       appState.board[slotIndex].prize = prize;
       appState.board[slotIndex].picked_by = appState.currentStudent;
@@ -951,12 +896,7 @@
       recalculateStats();
       saveCurrentState();
 
-      forceSendToSheet({
-        action: "pick",
-        studentName: appState.currentStudent,
-        slotId: slotNum,
-        prize: prize
-      });
+      forceSendToSheet({ action: "pick", studentName: appState.currentStudent, slotId: slotNum, prize: prize });
 
       renderStats();
       updateSessionCounter();
@@ -964,10 +904,7 @@
       setTimeout(() => {
         cardElement.classList.remove("tearing");
         cardElement.className = "slot-card picked h-12 rounded-xl bg-slate-200/90 border border-slate-300 text-slate-500 flex flex-col items-center justify-center text-xs font-bold cursor-not-allowed select-none";
-        cardElement.innerHTML = `
-          <span class="text-[9px] text-slate-400">#${slotNum}</span>
-          <span class="text-[11px] font-extrabold text-slate-700">${prize}등</span>
-        `;
+        cardElement.innerHTML = `<span class="text-[9px] text-slate-400">#${slotNum}</span><span class="text-[11px] font-extrabold text-slate-700">${prize}등</span>`;
       }, 350);
 
       appendRecentResult(slotNum, prize, appState.currentStudent);
@@ -1016,7 +953,7 @@
         appState.isPicking = false;
         updateSessionCounter();
         renderBoard();
-        resetSelectionForm(); // 완료 후 이름 및 개수 초기화
+        resetSelectionForm(); // ✨ 완료 후 학생/개수 초기화
       } else {
         updateSessionCounter();
       }
@@ -1036,16 +973,7 @@
 
       const item = document.createElement("div");
       item.className = `p-2.5 rounded-2xl border flex items-center justify-between shadow-sm ${theme.bg} ${theme.border}`;
-      item.innerHTML = `
-        <div class="flex flex-col">
-          <div class="flex items-center gap-1.5">
-            <span class="text-base">${theme.icon}</span>
-            <span class="font-extrabold text-sm ${theme.text}">${studentName} 학생 ${prize}등 당첨!</span>
-          </div>
-          <span class="text-[10px] text-slate-500 font-medium pl-6">${timeStr}</span>
-        </div>
-        <span class="text-[11px] font-bold text-slate-500 bg-white/80 px-2 py-1 rounded-lg">#${slotNum}번</span>
-      `;
+      item.innerHTML = `<div class="flex flex-col"><div class="flex items-center gap-1.5"><span class="text-base">${theme.icon}</span><span class="font-extrabold text-sm ${theme.text}">${studentName} 학생 ${prize}등 당첨!</span></div><span class="text-[10px] text-slate-500 font-medium pl-6">${timeStr}</span></div><span class="text-[11px] font-bold text-slate-500 bg-white/80 px-2 py-1 rounded-lg">#${slotNum}번</span>`;
       list.prepend(item);
     }
 
@@ -1085,9 +1013,7 @@
       setTimeout(() => document.getElementById("studentPinInput").focus(), 150);
     }
 
-    function closeStudentModal() {
-      document.getElementById("studentModal").classList.add("hidden");
-    }
+    function closeStudentModal() { document.getElementById("studentModal").classList.add("hidden"); }
 
     async function verifyOrSetPin() {
       const name = document.getElementById("modalStudentNameDisplay").value;
@@ -1100,7 +1026,6 @@
       const action = isFirst ? "setPin" : "verifyPin";
 
       forceSendToSheet({ action, studentName: name, pin });
-
       student.hasPin = true;
       saveCurrentState();
       if (isFirst) alert("비밀번호가 성공적으로 등록되었습니다!");
@@ -1135,9 +1060,7 @@
       setTimeout(() => document.getElementById("teacherPassInput").focus(), 100);
     }
 
-    function closeTeacherAuthModal() {
-      document.getElementById("teacherAuthModal").classList.add("hidden");
-    }
+    function closeTeacherAuthModal() { document.getElementById("teacherAuthModal").classList.add("hidden"); }
 
     function checkTeacherPassword() {
       const pass = document.getElementById("teacherPassInput").value.trim();
@@ -1155,10 +1078,9 @@
       renderTeacherTable();
     }
 
-    function closeTeacherMatrixModal() {
-      document.getElementById("teacherMatrixModal").classList.add("hidden");
-    }
+    function closeTeacherMatrixModal() { document.getElementById("teacherMatrixModal").classList.add("hidden"); }
 
+    // ✨ 교사용 대시보드: 현황 옆에 직접 사용(차감) 수량을 입력하고 [사용] 버튼으로 스마트 차감 실행
     function renderTeacherTable() {
       const tbody = document.getElementById("teacherTableBody");
       tbody.innerHTML = "";
@@ -1166,79 +1088,112 @@
       appState.students.forEach((s, idx) => {
         const upgrades = calculateMaxUpgrades(s.rank5, s.rank4, s.rank3, s.rank2);
         const tr = document.createElement("tr");
-        tr.className = "student-row hover:bg-emerald-50 transition cursor-pointer";
+        tr.className = "student-row hover:bg-emerald-50 transition";
         tr.dataset.rowIndex = idx;
 
         tr.innerHTML = `
           <td class="py-2.5 px-2 border-r border-slate-200 text-slate-400 text-xs">${idx + 1}</td>
           <td class="py-2.5 px-4 border-r border-slate-200 font-extrabold text-slate-700">${s.name}</td>
-          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-1 text-amber-700" data-col="1" onclick="openCellEdit('${s.name}', 1, ${s.rank1})">${s.rank1}개</td>
-          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-2 text-purple-700" data-col="2" onclick="openCellEdit('${s.name}', 2, ${s.rank2})">${s.rank2}개</td>
-          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-3 text-blue-700" data-col="3" onclick="openCellEdit('${s.name}', 3, ${s.rank3})">${s.rank3}개</td>
-          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-4 text-teal-700" data-col="4" onclick="openCellEdit('${s.name}', 4, ${s.rank4})">${s.rank4}개</td>
-          <td class="py-2.5 px-4 border-r border-slate-200 cell-rank col-5 text-emerald-700" data-col="5" onclick="openCellEdit('${s.name}', 5, ${s.rank5})">${s.rank5}개</td>
-          <td class="py-2.5 px-4 text-xs font-semibold text-slate-500">
+          <td class="py-2.5 px-3 border-r border-slate-200 text-amber-700">
+            <div class="flex items-center justify-center gap-1.5">
+              <span><b>${s.rank1}개</b></span>
+              <input type="number" min="0" value="0" id="use_${s.name}_1" class="w-12 text-center border rounded font-mono text-xs py-0.5" />
+              <button onclick="useTicket('${s.name}', 1)" class="bg-rose-500 hover:bg-rose-600 text-white px-2 py-0.5 rounded text-[11px] font-bold shadow">사용</button>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 border-r border-slate-200 text-purple-700">
+            <div class="flex items-center justify-center gap-1.5">
+              <span><b>${s.rank2}개</b></span>
+              <input type="number" min="0" value="0" id="use_${s.name}_2" class="w-12 text-center border rounded font-mono text-xs py-0.5" />
+              <button onclick="useTicket('${s.name}', 2)" class="bg-rose-500 hover:bg-rose-600 text-white px-2 py-0.5 rounded text-[11px] font-bold shadow">사용</button>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 border-r border-slate-200 text-blue-700">
+            <div class="flex items-center justify-center gap-1.5">
+              <span><b>${s.rank3}개</b></span>
+              <input type="number" min="0" value="0" id="use_${s.name}_3" class="w-12 text-center border rounded font-mono text-xs py-0.5" />
+              <button onclick="useTicket('${s.name}', 3)" class="bg-rose-500 hover:bg-rose-600 text-white px-2 py-0.5 rounded text-[11px] font-bold shadow">사용</button>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 border-r border-slate-200 text-teal-700">
+            <div class="flex items-center justify-center gap-1.5">
+              <span><b>${s.rank4}개</b></span>
+              <input type="number" min="0" value="0" id="use_${s.name}_4" class="w-12 text-center border rounded font-mono text-xs py-0.5" />
+              <button onclick="useTicket('${s.name}', 4)" class="bg-rose-500 hover:bg-rose-600 text-white px-2 py-0.5 rounded text-[11px] font-bold shadow">사용</button>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 border-r border-slate-200 text-emerald-700">
+            <div class="flex items-center justify-center gap-1.5">
+              <span><b>${s.rank5}개</b></span>
+              <input type="number" min="0" value="0" id="use_${s.name}_5" class="w-12 text-center border rounded font-mono text-xs py-0.5" />
+              <button onclick="useTicket('${s.name}', 5)" class="bg-rose-500 hover:bg-rose-600 text-white px-2 py-0.5 rounded text-[11px] font-bold shadow">사용</button>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 text-xs font-semibold text-slate-500">
             ${upgrades.canMake1 > 0 ? `<span class="text-amber-600 font-bold">1등 ${upgrades.canMake1}개 가능</span>` : `2등 ${upgrades.canMake2}개 가능`}
           </td>
         `;
 
-        const cells = tr.querySelectorAll(".cell-rank");
-        cells.forEach(cell => {
-          cell.addEventListener("mouseenter", () => {
-            const col = cell.dataset.col;
-            tr.classList.add("cross-row");
-            document.querySelectorAll(`.col-${col}`).forEach(el => el.classList.add("cross-col"));
-            cell.classList.add("cross-target");
-          });
-          cell.addEventListener("mouseleave", () => {
-            const col = cell.dataset.col;
-            tr.classList.remove("cross-row");
-            document.querySelectorAll(`.col-${col}`).forEach(el => el.classList.remove("cross-col"));
-            cell.classList.remove("cross-target");
-          });
+        const cells = tr.querySelectorAll("td");
+        cells.forEach((cell, cIdx) => {
+          if(cIdx >= 2 && cIdx <= 6) {
+            cell.addEventListener("mouseenter", () => { tr.classList.add("cross-row"); });
+            cell.addEventListener("mouseleave", () => { tr.classList.remove("cross-row"); });
+          }
         });
 
         tbody.appendChild(tr);
       });
     }
 
-    function openCellEdit(studentName, rank, currentCount) {
-      appState.editingCell = { studentName, rank, amount: currentCount };
-      document.getElementById("cellEditModal").classList.remove("hidden");
-      document.getElementById("cellEditTitle").innerText = `${studentName} 학생 ${rank}등 티켓`;
-      document.getElementById("cellEditDesc").innerText = `현재 보유량: ${currentCount}개 (원하는 수량으로 조절하세요)`;
-      document.getElementById("cellEditAmount").value = currentCount;
-    }
-
-    function closeCellEditModal() {
-      document.getElementById("cellEditModal").classList.add("hidden");
-    }
-
-    function adjustCellAmount(diff) {
-      const input = document.getElementById("cellEditAmount");
-      let val = Math.max(0, parseInt(input.value || 0, 10) + diff);
-      input.value = val;
-    }
-
-    async function saveCellAmount() {
-      const input = document.getElementById("cellEditAmount");
-      const val = Math.max(0, parseInt(input.value || 0, 10));
-      const { studentName, rank } = appState.editingCell;
+    // 스마트 3:1 자동 차감 로직이 포함된 교사용 [사용] 버튼 핸들러
+    async function useTicket(studentName, rank) {
+      const input = document.getElementById(`use_${studentName}_${rank}`);
+      const useCount = parseInt(input.value || 0, 10);
+      if (useCount <= 0) return alert("사용할 수량을 1개 이상 입력해주세요!");
 
       const student = appState.students.find(s => s.name === studentName);
-      if (student) {
-        student[`rank${rank}`] = val;
+      if (!student) return;
+
+      let stock = { 1: student.rank1, 2: student.rank2, 3: student.rank3, 4: student.rank4, 5: student.rank5 };
+
+      function borrowAndDeduct(r, c) {
+        if (stock[r] >= c) {
+          stock[r] -= c;
+          return true;
+        }
+        if (r >= 5) return false;
+        let deficit = c - stock[r];
+        let neededLower = deficit * 3;
+        if (!borrowAndDeduct(r + 1, neededLower)) return false;
+        stock[r] += deficit;
+        stock[r] -= c;
+        return true;
       }
 
-      closeCellEditModal();
-      renderTeacherTable();
+      if (!borrowAndDeduct(rank, useCount)) {
+        return alert(`${studentName} 학생이 보유한 티켓 수량(상/하위 등수 합성 포함)이 부족합니다!`);
+      }
 
-      forceSendToSheet({
-        action: "updateTicket",
-        studentName,
-        rank,
-        newAmount: val
-      });
+      student.rank1 = stock[1];
+      student.rank2 = stock[2];
+      student.rank3 = stock[3];
+      student.rank4 = stock[4];
+      student.rank5 = stock[5];
+
+      renderTeacherTable();
+      saveCurrentState();
+
+      for (let r = 1; r <= 5; r++) {
+        forceSendToSheet({
+          action: "updateTicket",
+          studentName: studentName,
+          rank: r,
+          newAmount: stock[r]
+        });
+      }
+
+      alert(`${studentName} 학생의 ${rank}등 티켓 ${useCount}개가 성공적으로 사용(차감)되었습니다!`);
     }
 
     window.addEventListener("DOMContentLoaded", () => {
