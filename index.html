@@ -58,13 +58,14 @@
           <p class="text-[11px] text-emerald-200">6학년 3반 200칸 전자칠판 뽑기판</p>
         </div>
         
-        <!-- BGM 토글 및 슬라이더 -->
-        <div class="ml-3 flex items-center gap-2 bg-emerald-800/80 px-3 py-1.5 rounded-xl border border-emerald-400/50">
+        <!-- 풍성한 5트랙 BGM 토글 & 볼륨 슬라이더 -->
+        <div class="ml-2 flex items-center gap-2 bg-emerald-800/80 px-3 py-1.5 rounded-xl border border-emerald-400/50">
           <button id="bgmToggleBtn" onclick="toggleBGM(event)" class="active:scale-95 text-xs font-bold flex items-center gap-1.5 transition">
             <i id="bgmIcon" class="fa-solid fa-volume-xmark text-yellow-300"></i>
             <span id="bgmText">BGM</span>
           </button>
-          <input type="range" id="bgmVolumeSlider" min="0" max="100" value="15" oninput="changeBgmVolume(this.value)" onclick="event.stopPropagation()" class="w-20 accent-yellow-300 cursor-pointer" title="배경음 볼륨 조절" />
+          <input type="range" id="bgmVolumeSlider" min="0" max="100" value="15" oninput="changeBgmVolume(this.value)" onclick="event.stopPropagation()" class="w-16 accent-yellow-300 cursor-pointer" title="배경음 볼륨 조절" />
+          <span id="bgmTrackName" class="text-[10px] text-emerald-200 font-bold hidden sm:inline-block">테마 1: 활기찬 마을</span>
         </div>
       </div>
 
@@ -84,7 +85,7 @@
       <!-- 상단 확률 현황판 -->
       <div id="statsBar" class="w-full flex flex-wrap items-center justify-between gap-1.5 bg-emerald-800/95 text-white p-2.5 rounded-2xl shadow-sm border border-emerald-600 text-xs font-semibold"></div>
 
-      <!-- 200개 클로버 격자 뽑기판 -->
+      <!-- 200개 클로버 격자 뽑기판 (자물쇠 잠금 오버레이 포함) -->
       <div class="bg-white rounded-3xl p-4 shadow-sm border border-emerald-100 flex flex-col flex-1 relative overflow-hidden">
         
         <!-- 🔒 뽑기판 잠금 오버레이 -->
@@ -93,7 +94,7 @@
             <i class="fa-solid fa-lock"></i>
           </div>
           <h3 class="font-jua text-2xl text-yellow-300 mb-1">뽑기판이 잠겨 있습니다</h3>
-          <p class="text-xs text-emerald-100 mb-4">선생님 암호(0306)를 입력하여 잠금을 해제해야 뽑기를 진행할 수 있습니다.</p>
+          <p class="text-xs text-emerald-100 mb-4">선생님 암호를 입력하여 잠금을 해제해야 뽑기를 진행할 수 있습니다.</p>
           
           <div class="flex items-center gap-2 max-w-xs w-full">
             <input type="password" id="boardUnlockInput" maxlength="6" placeholder="암호 입력" class="flex-1 bg-white/20 border-2 border-yellow-300/80 rounded-xl px-4 py-2 text-center font-bold tracking-widest text-lg text-white placeholder-emerald-200/60 outline-none focus:bg-white focus:text-slate-900 transition" onkeyup="if(event.key==='Enter') unlockBoard()" />
@@ -148,9 +149,8 @@
             </button>
           </div>
 
-          <!-- 선생님 관리 / 다시 잠금 / 암호 기반 초기화 / 새로고침 -->
+          <!-- 선생님 관리 / 잠금 / 판 리셋 / 새로고침 -->
           <div class="flex items-center gap-2">
-            <!-- 1. 암호 기반 초기화 버튼 -->
             <button onclick="promptResetBoard()" title="암호 입력 후 200칸 초기화" class="bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold shadow border border-rose-200 flex items-center gap-1">
               <i class="fa-solid fa-arrows-rotate text-rose-500"></i>
               <span>판 리셋</span>
@@ -355,7 +355,7 @@
         <i class="fa-solid fa-key"></i>
       </div>
       <h3 class="font-jua text-xl text-slate-800 mb-1">교사 인증</h3>
-      <p class="text-xs text-slate-500 mb-4">선생님 관리 비밀번호를 입력하세요.</p>
+      <p class="text-xs text-slate-500 mb-4">선생님 전용 관리 비밀번호를 입력하세요.</p>
       
       <input type="password" id="teacherPassInput" maxlength="6" placeholder="비밀번호 입력" class="w-full border-2 border-amber-300 focus:border-amber-500 rounded-xl p-2.5 text-center font-bold tracking-widest text-xl mb-4 outline-none" onkeyup="if(event.key==='Enter') checkTeacherPassword()" />
       
@@ -375,7 +375,7 @@
           <span class="text-2xl">📊</span>
           <div>
             <h3 class="font-jua text-2xl text-slate-800">우리 반 학생 뽑기 보유 현황판</h3>
-            <p class="text-xs text-slate-500">마우스를 올리면 가로/세로가 하이라이트됩니다. 셀을 클릭하면 즉시 수량을 수정할 수 있습니다.</p>
+            <p class="text-xs text-slate-500">마우스를 올리면 가로/세로가 하이라이트됩니다. 숫자를 클릭하면 즉시 수량을 수정할 수 있습니다.</p>
           </div>
         </div>
         <button onclick="closeTeacherMatrixModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
@@ -434,13 +434,48 @@
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // Web Audio 사운드 & BGM
+    // 🎵 5곡의 버라이어티 풍성한 BGM 플레이리스트 & Web Audio 신시사이저
     const SoundFX = {
       ctx: null,
       bgmGain: null,
       bgmTimer: null,
       isBgmPlaying: false,
+      trackIndex: 0,
       noteIndex: 0,
+
+      // 5가지의 다른 분위기를 가진 멜로디 트랙 모음
+      tracks: [
+        {
+          name: "테마 1: 활기찬 모험 (C 메이저)",
+          bpm: 180,
+          type: "triangle",
+          notes: [523.25, 659.25, 783.99, 1046.50, 783.99, 659.25, 523.25, 659.25, 587.33, 698.46, 880.00, 698.46, 523.25, 659.25, 783.99, 0]
+        },
+        {
+          name: "테마 2: 산뜻한 산책 (F 메이저)",
+          bpm: 200,
+          type: "sine",
+          notes: [349.23, 440.00, 523.25, 440.00, 392.00, 493.88, 587.33, 493.88, 440.00, 523.25, 659.25, 523.25, 349.23, 392.00, 440.00, 0]
+        },
+        {
+          name: "테마 3: 두근두근 아케이드 (A 마이너)",
+          bpm: 170,
+          type: "triangle",
+          notes: [440.00, 523.25, 659.25, 523.25, 440.00, 392.00, 329.63, 392.00, 440.00, 440.00, 523.25, 659.25, 783.99, 659.25, 523.25, 0]
+        },
+        {
+          name: "테마 4: 날아오르는 하늘 (G 메이저)",
+          bpm: 190,
+          type: "sine",
+          notes: [392.00, 493.88, 587.33, 783.99, 880.00, 783.99, 587.33, 493.88, 523.25, 659.25, 783.99, 1046.50, 880.00, 783.99, 587.33, 0]
+        },
+        {
+          name: "테마 5: 신나는 축제 (D 메이저)",
+          bpm: 175,
+          type: "triangle",
+          notes: [587.33, 739.99, 880.00, 1174.66, 880.00, 739.99, 587.33, 739.99, 659.25, 783.99, 987.77, 783.99, 587.33, 739.99, 880.00, 0]
+        }
+      ],
       
       init() {
         if (!this.ctx) {
@@ -472,36 +507,37 @@
         this.init();
         if (this.isBgmPlaying) return;
         this.isBgmPlaying = true;
+        this.playNextLoop();
+      },
 
-        const melody = [
-          523.25, 659.25, 783.99, 1046.50, 783.99, 659.25, 523.25, 659.25,
-          587.33, 698.46, 880.00, 1174.66, 880.00, 698.46, 587.33, 698.46,
-          659.25, 783.99, 1046.50, 1318.51, 1046.50, 783.99, 698.46, 783.99,
-          783.99, 698.46, 659.25, 587.33, 523.25, 0,      523.25, 0
-        ];
+      playNextLoop() {
+        if (!this.isBgmPlaying) return;
+        const curTrack = this.tracks[this.trackIndex];
+        document.getElementById("bgmTrackName").innerText = curTrack.name;
 
-        this.noteIndex = 0;
-        const playNextNote = () => {
-          if (!this.isBgmPlaying) return;
-          const freq = melody[this.noteIndex];
-          if (freq > 0 && this.ctx) {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            
-            gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
-            
-            osc.connect(gain);
-            if (this.bgmGain) osc.connect(this.bgmGain);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.17);
-          }
-          this.noteIndex = (this.noteIndex + 1) % melody.length;
-          this.bgmTimer = setTimeout(playNextNote, 180);
-        };
-        playNextNote();
+        const freq = curTrack.notes[this.noteIndex];
+        if (freq > 0 && this.ctx) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = curTrack.type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          
+          gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
+          
+          osc.connect(gain);
+          if (this.bgmGain) osc.connect(this.bgmGain);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.17);
+        }
+
+        this.noteIndex++;
+        if (this.noteIndex >= curTrack.notes.length) {
+          this.noteIndex = 0;
+          this.trackIndex = (this.trackIndex + 1) % this.tracks.length; // 다음 곡으로 자연스럽게 전환!
+        }
+
+        this.bgmTimer = setTimeout(() => this.playNextLoop(), curTrack.bpm);
       },
 
       stopBGM() {
@@ -593,10 +629,10 @@
       }
     }
 
-    // JSONP 무조건 성공 전송기
+    // JSONP 스크립트 인젝션 (구글 리디렉션 및 CORS 100% 회피 전송)
     function forceSendToSheet(params) {
       const script = document.createElement("script");
-      const cbName = "jsonp_cb_" + Math.floor(Math.random() * 1000000);
+      const cbName = "cb_" + Math.floor(Math.random() * 1000000);
       params.callback = cbName;
       
       window[cbName] = function(res) {
@@ -613,9 +649,9 @@
       } catch(e){}
     }
 
-    const STORAGE_KEY_BOARD = "skyclass_board_v8";
-    const STORAGE_KEY_LOGS = "skyclass_logs_v8";
-    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v8";
+    const STORAGE_KEY_BOARD = "skyclass_board_v10";
+    const STORAGE_KEY_LOGS = "skyclass_logs_v10";
+    const STORAGE_KEY_LOCKED = "skyclass_locked_state_v10";
 
     function generateStrictInitialBoard() {
       let pool = [];
@@ -736,9 +772,7 @@
         renderBoard();
         closeResetModal();
 
-        // 스프레드시트의 board 시트 초기화 요청
         forceSendToSheet({ action: "getStatus" });
-
         alert("200칸 뽑기판이 새로운 판으로 깨끗하게 초기화되었습니다!");
       } else {
         alert("선생님 암호가 일치하지 않습니다!");
@@ -822,8 +856,9 @@
       if (icon) icon.classList.add("fa-spin");
 
       try {
+        const url = getApiUrl();
         const qs = new URLSearchParams({ action: "getStatus", t: Date.now() }).toString();
-        const res = await fetch(`${API_URL}?${qs}`);
+        const res = await fetch(`${url}?${qs}`);
         const data = await res.json();
         if (data && data.success) {
           if (data.students && data.students.length > 0) {
@@ -869,7 +904,6 @@
     }
 
     function startPickingSession(isMultiMode = false) {
-      // 2. 연타 버그 방지 락 확인
       if (appState.isProcessing) return;
 
       SoundFX.init();
@@ -902,9 +936,8 @@
       }
     }
 
-    // 2. 연타 방지 락 적용된 연속 뽑기
     async function executeMultiPick(totalToPick) {
-      if (appState.isProcessing) return; // 이미 진행 중이면 무시
+      if (appState.isProcessing) return;
       appState.isProcessing = true;
 
       appState.isPicking = false;
@@ -971,7 +1004,7 @@
       statusEl.className = "flex items-center gap-2 font-jua text-base py-1.5 px-4 rounded-xl bg-white/10 backdrop-blur border border-white/20 text-white shadow-sm";
       statusEl.innerHTML = `<i class="fa-regular fa-circle-check text-emerald-300 text-lg"></i><span>✅ ${appState.currentStudent} 학생 연속 뽑기 완료!</span>`;
 
-      appState.isProcessing = false; // 락 해제
+      appState.isProcessing = false;
     }
 
     function showMultiRevealModal(results) {
@@ -1025,12 +1058,11 @@
       }
     }
 
-    // 단일 클로버 터치
     async function onSlotClick(slotNum, cardElement) {
       if (!appState.isPicking || appState.isProcessing) return;
       if (cardElement.classList.contains("picked") || cardElement.classList.contains("tearing")) return;
 
-      appState.isProcessing = true; // 락 활성화
+      appState.isProcessing = true;
 
       SoundFX.playTear();
       cardElement.classList.add("tearing");
@@ -1074,7 +1106,7 @@
 
       setTimeout(() => {
         showRevealModal(slotNum, prize);
-        appState.isProcessing = false; // 락 해제
+        appState.isProcessing = false;
       }, 250);
     }
 
@@ -1251,6 +1283,8 @@
 
     function openTeacherMatrixModal() {
       document.getElementById("teacherMatrixModal").classList.remove("hidden");
+      document.getElementById("customApiUrlInput").value = getApiUrl();
+      document.getElementById("sheetTestResult").innerText = "";
       renderTeacherTable();
     }
 
