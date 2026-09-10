@@ -58,11 +58,14 @@
           <p class="text-[11px] text-emerald-200">6학년 3반 200칸 전자칠판 뽑기판</p>
         </div>
         
-        <!-- BGM 토글 버튼 -->
-        <button id="bgmToggleBtn" onclick="toggleBGM(event)" class="ml-2 bg-emerald-800/80 hover:bg-emerald-900 active:scale-95 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-400/50 flex items-center gap-1.5 transition">
-          <i id="bgmIcon" class="fa-solid fa-volume-xmark text-yellow-300"></i>
-          <span id="bgmText">BGM 켜기</span>
-        </button>
+        <!-- BGM 토글 및 슬라이드 볼륨 조절 -->
+        <div class="ml-3 flex items-center gap-2 bg-emerald-800/80 px-3 py-1.5 rounded-xl border border-emerald-400/50">
+          <button id="bgmToggleBtn" onclick="toggleBGM(event)" class="active:scale-95 text-xs font-bold flex items-center gap-1.5 transition">
+            <i id="bgmIcon" class="fa-solid fa-volume-xmark text-yellow-300"></i>
+            <span id="bgmText">BGM</span>
+          </button>
+          <input type="range" id="bgmVolumeSlider" min="0" max="100" value="15" oninput="changeBgmVolume(this.value)" onclick="event.stopPropagation()" class="w-20 accent-yellow-300 cursor-pointer" title="배경음 볼륨 조절" />
+        </div>
       </div>
 
       <div id="sessionStatus" class="flex items-center gap-2 font-jua text-base py-1.5 px-4 rounded-xl bg-white/10 backdrop-blur border border-white/20 text-white shadow-sm">
@@ -361,7 +364,7 @@
     </div>
   </div>
 
-  <!-- [셀 수정 팝업] -->
+  <!-- [셀 클릭 시 수량 증감 미니 팝업] -->
   <div id="cellEditModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl border-2 border-emerald-400 text-center">
       <h4 id="cellEditTitle" class="font-jua text-lg text-slate-800 mb-1">수량 변경</h4>
@@ -388,7 +391,7 @@
       "김도우", "김동건", "김민수", "김태양", "송민준", "윤수민", "이성민", "정승빈", "주원준", "차주원", "채윤호", "하윤"
     ];
 
-    // 강력한 Web Audio 사운드 & 통통 튀는 BGM 루퍼
+    // 강력한 Web Audio 사운드 & 통통 튀는 BGM 루퍼 + 볼륨 슬라이더 연동
     const SoundFX = {
       ctx: null,
       bgmGain: null,
@@ -402,7 +405,8 @@
           if (AudioContext) {
             this.ctx = new AudioContext();
             this.bgmGain = this.ctx.createGain();
-            this.bgmGain.gain.value = 0.12; // 충분히 들리는 쾌적한 볼륨
+            const sliderVal = document.getElementById("bgmVolumeSlider") ? document.getElementById("bgmVolumeSlider").value : 15;
+            this.bgmGain.gain.value = (sliderVal / 100) * 0.3;
             this.bgmGain.connect(this.ctx.destination);
           }
         }
@@ -415,7 +419,12 @@
         this.init();
       },
 
-      // 신나는 8-bit 아케이드 멜로디 루프
+      setVolume(val) {
+        if (this.bgmGain && this.ctx) {
+          this.bgmGain.gain.setValueAtTime((val / 100) * 0.3, this.ctx.currentTime);
+        }
+      },
+
       startBGM() {
         this.init();
         if (this.isBgmPlaying) return;
@@ -438,16 +447,16 @@
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
             
-            gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.14);
+            gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
             
             osc.connect(gain);
-            gain.connect(this.bgmGain);
+            if (this.bgmGain) osc.connect(this.bgmGain);
             osc.start();
-            osc.stop(this.ctx.currentTime + 0.15);
+            osc.stop(this.ctx.currentTime + 0.17);
           }
           this.noteIndex = (this.noteIndex + 1) % melody.length;
-          this.bgmTimer = setTimeout(playNextNote, 160);
+          this.bgmTimer = setTimeout(playNextNote, 180);
         };
         playNextNote();
       },
@@ -469,7 +478,7 @@
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        osc.connect(this.ctx.destination);
         osc.start(now);
         osc.stop(now + 0.14);
       },
@@ -504,7 +513,7 @@
           osc.frequency.value = freq;
           const start = now + idx * 0.08;
           gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(0.3, start + 0.02);
+          gain.gain.linearRampToValueAtTime(0.35, start + 0.02);
           gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
@@ -525,32 +534,38 @@
         SoundFX.stopBGM();
         icon.className = "fa-solid fa-volume-xmark text-yellow-300";
         text.innerText = "BGM 켜기";
-        btn.classList.remove("bg-emerald-950", "border-yellow-300");
       } else {
         SoundFX.startBGM();
         icon.className = "fa-solid fa-volume-high text-yellow-300 animate-bounce";
         text.innerText = "BGM 끄기";
-        btn.classList.add("bg-emerald-950", "border-yellow-300");
       }
     }
 
-    // CORS 차단 완전 회피형 전송 헬퍼 (구글 스프레드시트 100% 즉각 기록 보장)
+    function changeBgmVolume(val) {
+      SoundFX.setVolume(val);
+      if (!SoundFX.isBgmPlaying && val > 0) {
+        // 슬라이더를 건드리면 음악 자동 켜기
+        SoundFX.startBGM();
+        document.getElementById("bgmIcon").className = "fa-solid fa-volume-high text-yellow-300 animate-bounce";
+        document.getElementById("bgmText").innerText = "BGM 끄기";
+      }
+    }
+
+    // CORS 차단 완전 회피형 전송 헬퍼 (구글 스프레드시트에 즉각 기록)
     function forceSendToSheet(params) {
       const qs = new URLSearchParams(params).toString();
       const fullUrl = `${API_URL}?${qs}`;
       
-      // 1. fetch no-cors 전송 (브라우저 차단 무조건 회피)
       try {
         fetch(fullUrl, { method: "GET", mode: "no-cors" });
       } catch (e) {}
 
-      // 2. Image beacon 백업 (100% 확실한 서버 트리거)
       const img = new Image();
       img.src = fullUrl;
     }
 
-    const STORAGE_KEY_BOARD = "skyclass_board_v5";
-    const STORAGE_KEY_LOGS = "skyclass_logs_v5";
+    const STORAGE_KEY_BOARD = "skyclass_board_v6";
+    const STORAGE_KEY_LOGS = "skyclass_logs_v6";
 
     function generateStrictInitialBoard() {
       let pool = [];
@@ -623,7 +638,6 @@
       5: { border: "border-emerald-400", title: "🍬 5등 당첨!", text: "text-emerald-700", bg: "bg-emerald-100", icon: "🍬" }
     };
 
-    // 남은 잔여 개수에 맞게 연속 뽑기 버튼 텍스트 자동 동기화
     function syncPickButtons() {
       const selectVal = parseInt(document.getElementById("pickCountSelect").value, 10);
       let count = selectVal;
@@ -700,7 +714,8 @@
       if (icon) icon.classList.add("fa-spin");
 
       try {
-        const res = await fetch(`${API_URL}?action=getStatus&t=${Date.now()}`);
+        const qs = new URLSearchParams({ action: "getStatus", t: Date.now() }).toString();
+        const res = await fetch(`${API_URL}?${qs}`);
         const data = await res.json();
         if (data && data.success) {
           if (data.board && data.board.length === 200) {
@@ -716,7 +731,7 @@
           saveCurrentState();
         }
       } catch (err) {
-        console.warn("로컬 상태 유지:", err);
+        console.warn("로컬 모드로 동작:", err);
       } finally {
         if (icon) icon.classList.remove("fa-spin");
         recalculateStats();
@@ -748,7 +763,6 @@
       });
     }
 
-    // 뽑기 시작
     function startPickingSession(isMultiMode = false) {
       SoundFX.init();
       if (!SoundFX.isBgmPlaying) SoundFX.startBGM();
@@ -759,7 +773,6 @@
       if (!name) return alert("학생을 먼저 선택해주세요!");
       if (appState.unpickedCount <= 0) return alert("200개 뽑기판이 모두 소진되었습니다!");
 
-      // 만약 이미 세션 진행 중인데 "한번에 뽑기"를 눌렀다면 남은 수량만큼만 실행
       if (isMultiMode && appState.isPicking && appState.currentStudent === name) {
         const remainingToPick = appState.allowedCount - appState.currentPickedCount;
         executeMultiPick(remainingToPick);
@@ -781,7 +794,6 @@
       }
     }
 
-    // 한번에 여러개 연속 뽑기 (드르륵 연출 & 시트 즉각 전송)
     async function executeMultiPick(totalToPick) {
       appState.isPicking = false;
       const unpickedSlots = [];
@@ -824,7 +836,7 @@
         results.push({ slotNum, prize });
         appendRecentResult(slotNum, prize, appState.currentStudent);
 
-        // 시트 전송 강제 실행
+        // 시트에 즉시 강제 전송
         forceSendToSheet({
           action: "pick",
           studentName: appState.currentStudent,
@@ -889,6 +901,7 @@
     function updateSessionCounter() {
       const statusEl = document.getElementById("sessionStatus");
       const left = appState.allowedCount - appState.currentPickedCount;
+      syncPickButtons();
 
       if (appState.isPicking && left > 0) {
         statusEl.className = "flex items-center gap-2 font-jua text-base py-1.5 px-4 rounded-xl bg-amber-400 text-slate-900 animate-pulse shadow-md";
@@ -928,7 +941,7 @@
       recalculateStats();
       saveCurrentState();
 
-      // 시트에 1초 만에 직접 강제 전송
+      // 시트에 1초 만에 즉시 강제 전송
       forceSendToSheet({
         action: "pick",
         studentName: appState.currentStudent,
@@ -937,7 +950,7 @@
       });
 
       renderStats();
-      syncPickButtons(); // 잔여 개수에 맞게 연속 뽑기 버튼 업데이트
+      updateSessionCounter();
 
       setTimeout(() => {
         cardElement.classList.remove("tearing");
@@ -992,11 +1005,9 @@
       if (left <= 0) {
         appState.isPicking = false;
         updateSessionCounter();
-        syncPickButtons();
         renderBoard();
       } else {
         updateSessionCounter();
-        syncPickButtons();
       }
     }
 
